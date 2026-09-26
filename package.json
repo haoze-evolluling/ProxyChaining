@@ -11,7 +11,9 @@
     "restore": "node cvr-patch.mjs restore",
     "rollback": "node cvr-patch.mjs restore",
     "diff": "node cvr-patch.mjs diff",
-    "export-patch": "node cvr-patch.mjs export-patch"
+    "export-patch": "node cvr-patch.mjs export-patch",
+    "build": "powershell -ExecutionPolicy Bypass -File build.ps1 -NoPause",
+    "build:exe": "powershell -ExecutionPolicy Bypass -File build.ps1 -NoPause"
   },
   "keywords": [
     "clash-verge-rev",

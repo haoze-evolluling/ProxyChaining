@@ -88,62 +88,56 @@ Clash Verge Rev 原生的“链式代理”功能（基于 Mihomo 核心的 `dia
 
 ## 四、快速上手与使用方法
 
-所有操作均可在当前目录通过 PowerShell 脚本 `.\patch.ps1` 或 `node cvr-patch.mjs` 完成。默认目标目录为 `C:\Users\leehaoze\clash-verge-rev-dev`（可通过参数指定其他目录）。
+本工具提供 **纯原生独立 EXE 程序**（适合无开发环境电脑）、**PowerShell 封装** 及 **Node.js 脚本** 三种使用方式。默认目标目录会自动检测当前目录、父目录或 `C:\Users\leehaoze\clash-verge-rev-dev`（也可通过命令行参数显式指定）。
 
-### 1. 检查补丁状态 (`status`)
+### 方式 A：无环境电脑直接使用独立 EXE（推荐）
+在没有安装 Node.js、Python 或任何开发环境的电脑上：
+- **双击运行 `cvr-patch.exe`**：直接启动控制台交互式菜单，输入数字 `1` 即可一键注入补丁，输入 `2` 即可撤销还原，界面友好，执行完毕后按回车返回或退出。
+- **命令行方式**：
+  ```cmd
+  # 检查补丁状态
+  cvr-patch.exe status
+  # 一键注入补丁
+  cvr-patch.exe inject
+  # 一键撤销还原
+  cvr-patch.exe restore
+  # 查看变更差异
+  cvr-patch.exe diff
+  # 导出 patch 补丁文件
+  cvr-patch.exe export-patch
+  # 指定自定义项目路径
+  cvr-patch.exe inject "D:\Projects\clash-verge-rev"
+  ```
+
+### 方式 B：一键编译 EXE 脚本 (`build.bat` / `build.ps1`)
+如果需要重新编译或在其他电脑上从源码生成 `cvr-patch.exe`：
+- **双击 `build.bat`** 或在终端执行：
+  ```cmd
+  build.bat
+  ```
+  *脚本利用 Windows 10/11 系统自带的 .NET Framework 编译器 `csc.exe`，0 外部依赖，秒级生成体积仅 44KB 的原生可执行文件。*
+- **PowerShell 用户**：
+  ```powershell
+  .\build.ps1
+  # 或者通过 npm / pnpm
+  npm run build:exe
+  ```
+
+### 方式 C：通过脚本运行 (`patch.ps1` 或 `node cvr-patch.mjs`)
+如果系统已安装 Node.js 或已编译 EXE，也可直接使用脚本：
 ```powershell
+# 自动选择已编译 EXE 或 Node.js 执行
 .\patch.ps1 status
-# 或者
-node cvr-patch.mjs status
-```
-*输出示例：*
-```
-=== Checking Patch Status in: C:\Users\leehaoze\clash-verge-rev-dev ===
-
-  [NOT_APPLIED] src\components\proxy\proxy-groups-chain.tsx
-  [NOT_APPLIED] src\components\proxy\proxy-chain.tsx
-  [NOT_APPLIED] src\types\proxy-view.ts
-  [NOT_APPLIED] src-tauri\src\config\runtime.rs
-
-[INFO] No patch modules applied yet (codebase is in original state). Run 'inject' to apply.
-```
-
-### 2. 一键注入补丁 (`inject` 或 `apply`)
-```powershell
 .\patch.ps1 inject
-# 或者
-node cvr-patch.mjs inject
-```
-*执行效果：*
-1. 自动备份 4 个目标文件（同时生成 `.cvr-patch.bak` 和时间戳备份目录）。
-2. 将跨订阅支持注入到指定位置。
-3. 注入完成后，节点跨订阅加入代理链不再置灰，能够正常保存与建立连接。
-
-### 3. 一键撤销还原 (`restore` 或 `rollback`)
-```powershell
 .\patch.ps1 restore
-# 或者
+.\patch.ps1 diff
+.\patch.ps1 export-patch
+
+# 或者直接用 Node.js 运行
+node cvr-patch.mjs status
+node cvr-patch.mjs inject
 node cvr-patch.mjs restore
 ```
-*执行效果：*
-- 优先从 `.cvr-patch.bak` 恢复；若不存在则自动执行 AST 逆向替换。
-- 恢复后代码完全等同于官方原始代码，不留残余标记。
-
-### 4. 查看变更差异 (`diff`)
-```powershell
-.\patch.ps1 diff
-# 或者
-node cvr-patch.mjs diff
-```
-*输出彩色 Unified Diff 补丁详情，清晰审阅所有被修改的行。*
-
-### 5. 导出标准补丁文件 (`export-patch`)
-```powershell
-.\patch.ps1 export-patch
-# 或者
-node cvr-patch.mjs export-patch
-```
-*将补丁导出至 `patches/cross-subscription-chain.patch`，支持在 CI/CD 或 Git 环境下使用 `git apply`。*
 
 ---
 

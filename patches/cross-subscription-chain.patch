@@ -1,4 +1,4 @@
-diff --git a/src/components/proxy/proxy-groups-chain.tsx b/src/components/proxy/proxy-groups-chain.tsx
+﻿diff --git a/src/components/proxy/proxy-groups-chain.tsx b/src/components/proxy/proxy-groups-chain.tsx
 --- a/src/components/proxy/proxy-groups-chain.tsx
 +++ b/src/components/proxy/proxy-groups-chain.tsx
 @@ -0,0 +0,0 @@ /* 使用全量节点作为候选节点，防止切换分组时已选节点失去 recordId */

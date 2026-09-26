@@ -172,6 +172,27 @@ const PATCH_RULES = [
         replace: `    [allCandidateNodes, candidateNodes, proxyView, t],
   )`,
       },
+      {
+        name: '持久化代理链到 localStorage 时保留 recordId 与 source 信息，避免刷新重绑失败',
+        find: `      const persistedChain = currentProxyChain.map(
+        ({ id, name, type, delay }) => ({
+          id,
+          name,
+          type,
+          delay,
+        }),
+      )`,
+        replace: `      const persistedChain = currentProxyChain.map(
+        ({ id, name, type, delay, recordId, source }) => ({
+          id,
+          name,
+          type,
+          delay,
+          recordId,
+          source,
+        }),
+      )`,
+      },
     ],
   },
   {
@@ -297,6 +318,36 @@ const PATCH_RULES = [
   return allNodes.length > 0
     ? allNodes
     : selectRuntimeStandaloneNodes(view, runtimeProxies)
+}`,
+      },
+      {
+        name: 'rebindNode 优雅降级匹配与容错，避免跨订阅或同名节点 recordId 丢失置灰',
+        find: `export function rebindNode(
+  candidates: readonly ProxyNodeView[],
+  binding: ProxyNodeBinding,
+) {
+  const matches = candidates.filter(
+    (node) =>
+      node.name === binding.name &&
+      (binding.source === undefined || sameSource(node.source, binding.source)),
+  )
+  const unique = new Map(matches.map((node) => [node.recordId, node]))
+  return unique.size === 1 ? unique.values().next().value : undefined
+}`,
+        replace: `export function rebindNode(
+  candidates: readonly ProxyNodeView[],
+  binding: ProxyNodeBinding,
+) {
+  let matches = candidates.filter(
+    (node) =>
+      node.name === binding.name &&
+      (binding.source === undefined || sameSource(node.source, binding.source)),
+  )
+  if (matches.length === 0 && binding.source !== undefined) {
+    matches = candidates.filter((node) => node.name === binding.name)
+  }
+  const unique = new Map(matches.map((node) => [node.recordId, node]))
+  return unique.size >= 1 ? unique.values().next().value : undefined
 }`,
       },
     ],

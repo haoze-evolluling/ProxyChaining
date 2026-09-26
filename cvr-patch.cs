@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -137,6 +137,28 @@ namespace CvrProxyChainPatcher
                                "  )",
                         Replace = "    [allCandidateNodes, candidateNodes, proxyView, t],\n" +
                                   "  )"
+                    },
+                    new PatchChunk
+                    {
+                        Name = "持久化代理链到 localStorage 时保留 recordId 与 source 信息，避免刷新重绑失败",
+                        Find = "      const persistedChain = currentProxyChain.map(\n" +
+                               "        ({ id, name, type, delay }) => ({\n" +
+                               "          id,\n" +
+                               "          name,\n" +
+                               "          type,\n" +
+                               "          delay,\n" +
+                               "        }),\n" +
+                               "      )",
+                        Replace = "      const persistedChain = currentProxyChain.map(\n" +
+                                  "        ({ id, name, type, delay, recordId, source }) => ({\n" +
+                                  "          id,\n" +
+                                  "          name,\n" +
+                                  "          type,\n" +
+                                  "          delay,\n" +
+                                  "          recordId,\n" +
+                                  "          source,\n" +
+                                  "        }),\n" +
+                                  "      )"
                     }
                 }
             },
@@ -271,6 +293,37 @@ namespace CvrProxyChainPatcher
                                   "  return allNodes.length > 0\n" +
                                   "    ? allNodes\n" +
                                   "    : selectRuntimeStandaloneNodes(view, runtimeProxies)\n" +
+                                  "}"
+                    },
+                    new PatchChunk
+                    {
+                        Name = "rebindNode 优雅降级匹配与容错，避免跨订阅或同名节点 recordId 丢失置灰",
+                        Find = "export function rebindNode(\n" +
+                               "  candidates: readonly ProxyNodeView[],\n" +
+                               "  binding: ProxyNodeBinding,\n" +
+                               ") {\n" +
+                               "  const matches = candidates.filter(\n" +
+                               "    (node) =>\n" +
+                               "      node.name === binding.name &&\n" +
+                               "      (binding.source === undefined || sameSource(node.source, binding.source)),\n" +
+                               "  )\n" +
+                               "  const unique = new Map(matches.map((node) => [node.recordId, node]))\n" +
+                               "  return unique.size === 1 ? unique.values().next().value : undefined\n" +
+                               "}",
+                        Replace = "export function rebindNode(\n" +
+                                  "  candidates: readonly ProxyNodeView[],\n" +
+                                  "  binding: ProxyNodeBinding,\n" +
+                                  ") {\n" +
+                                  "  let matches = candidates.filter(\n" +
+                                  "    (node) =>\n" +
+                                  "      node.name === binding.name &&\n" +
+                                  "      (binding.source === undefined || sameSource(node.source, binding.source)),\n" +
+                                  "  )\n" +
+                                  "  if (matches.length === 0 && binding.source !== undefined) {\n" +
+                                  "    matches = candidates.filter((node) => node.name === binding.name)\n" +
+                                  "  }\n" +
+                                  "  const unique = new Map(matches.map((node) => [node.recordId, node]))\n" +
+                                  "  return unique.size >= 1 ? unique.values().next().value : undefined\n" +
                                   "}"
                     }
                 }

@@ -1,4 +1,4 @@
-﻿diff --git a/src/components/proxy/proxy-groups-chain.tsx b/src/components/proxy/proxy-groups-chain.tsx
+diff --git a/src/components/proxy/proxy-groups-chain.tsx b/src/components/proxy/proxy-groups-chain.tsx
 --- a/src/components/proxy/proxy-groups-chain.tsx
 +++ b/src/components/proxy/proxy-groups-chain.tsx
 @@ -0,0 +0,0 @@ /* 使用全量节点作为候选节点，防止切换分组时已选节点失去 recordId */
@@ -94,6 +94,25 @@
 -  )
 +    [allCandidateNodes, candidateNodes, proxyView, t],
 +  )
+@@ -0,0 +0,0 @@ /* 持久化代理链到 localStorage 时保留 recordId 与 source 信息，避免刷新重绑失败 */
+-      const persistedChain = currentProxyChain.map(
+-        ({ id, name, type, delay }) => ({
+-          id,
+-          name,
+-          type,
+-          delay,
+-        }),
+-      )
++      const persistedChain = currentProxyChain.map(
++        ({ id, name, type, delay, recordId, source }) => ({
++          id,
++          name,
++          type,
++          delay,
++          recordId,
++          source,
++        }),
++      )
 
 diff --git a/src/components/proxy/proxy-chain.tsx b/src/components/proxy/proxy-chain.tsx
 --- a/src/components/proxy/proxy-chain.tsx
@@ -206,6 +225,34 @@ diff --git a/src/types/proxy-view.ts b/src/types/proxy-view.ts
 +  return allNodes.length > 0
 +    ? allNodes
 +    : selectRuntimeStandaloneNodes(view, runtimeProxies)
++}
+@@ -0,0 +0,0 @@ /* rebindNode 优雅降级匹配与容错，避免跨订阅或同名节点 recordId 丢失置灰 */
+-export function rebindNode(
+-  candidates: readonly ProxyNodeView[],
+-  binding: ProxyNodeBinding,
+-) {
+-  const matches = candidates.filter(
+-    (node) =>
+-      node.name === binding.name &&
+-      (binding.source === undefined || sameSource(node.source, binding.source)),
+-  )
+-  const unique = new Map(matches.map((node) => [node.recordId, node]))
+-  return unique.size === 1 ? unique.values().next().value : undefined
+-}
++export function rebindNode(
++  candidates: readonly ProxyNodeView[],
++  binding: ProxyNodeBinding,
++) {
++  let matches = candidates.filter(
++    (node) =>
++      node.name === binding.name &&
++      (binding.source === undefined || sameSource(node.source, binding.source)),
++  )
++  if (matches.length === 0 && binding.source !== undefined) {
++    matches = candidates.filter((node) => node.name === binding.name)
++  }
++  const unique = new Map(matches.map((node) => [node.recordId, node]))
++  return unique.size >= 1 ? unique.values().next().value : undefined
 +}
 
 diff --git a/src-tauri/src/config/runtime.rs b/src-tauri/src/config/runtime.rs

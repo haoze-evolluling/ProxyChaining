@@ -161,7 +161,7 @@ namespace CvrProxyChainPatcher
             }
             else
             {
-                ConsoleHelper.LogSuccess("跨订阅链式代理补丁已就绪 (4/4 模块生效)！");
+                ConsoleHelper.LogSuccess(string.Format("全部补丁模块已就绪 ({0}/{0} 模块生效)！", rules.Count));
             }
 
             // 2. 环境检查

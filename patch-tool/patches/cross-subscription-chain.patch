@@ -1,4 +1,4 @@
-diff --git a/src/components/proxy/proxy-groups-chain.tsx b/src/components/proxy/proxy-groups-chain.tsx
+﻿diff --git a/src/components/proxy/proxy-groups-chain.tsx b/src/components/proxy/proxy-groups-chain.tsx
 --- a/src/components/proxy/proxy-groups-chain.tsx
 +++ b/src/components/proxy/proxy-groups-chain.tsx
 @@ -0,0 +0,0 @@ /* 使用全量节点作为候选节点，防止切换分组时已选节点失去 recordId */
@@ -378,4 +378,90 @@ diff --git a/src-tauri/src/config/runtime.rs b/src-tauri/src/config/runtime.rs
 +            }
 +        }
 +    }
+
+diff --git a/src/services/update.ts b/src/services/update.ts
+--- a/src/services/update.ts
++++ b/src/services/update.ts
+@@ -0,0 +0,0 @@ /* checkUpdateSafe 默认屏蔽检查更新请求并返回 null */
+-export const checkUpdateSafe = async (
+-  options?: CheckOptions,
+-): Promise<Update | null> => {
+-  const result = await check(options ?? {})
+-  if (!result) return null
++export const checkUpdateSafe = async (
++  _options?: CheckOptions,
++): Promise<Update | null> => {
++  // [CVR-PATCH] 默认屏蔽在线检查更新，防止官方更新覆盖自定义构建版本
++  return null
++}
++
++export const checkUpdateInternal = async (
++  options?: CheckOptions,
++): Promise<Update | null> => {
++  const result = await check(options ?? {})
++  if (!result) return null
+
+diff --git a/src/hooks/use-update.ts b/src/hooks/use-update.ts
+--- a/src/hooks/use-update.ts
++++ b/src/hooks/use-update.ts
+@@ -0,0 +0,0 @@ /* shouldCheck 默认仅在显式为 true 时触发更新 */
+-  const { verge } = useVerge()
+-  const { auto_check_update } = verge || {}
+-
+-  const shouldCheck = enabled && auto_check_update !== false
++  const { verge } = useVerge()
++  const { auto_check_update } = verge || {}
++
++  // [CVR-PATCH] 默认关闭自动检查更新，避免官方升级覆盖自定义补丁版本
++  const shouldCheck = enabled && auto_check_update === true
+
+diff --git a/src/components/setting/mods/misc-viewer.tsx b/src/components/setting/mods/misc-viewer.tsx
+--- a/src/components/setting/mods/misc-viewer.tsx
++++ b/src/components/setting/mods/misc-viewer.tsx
+@@ -0,0 +0,0 @@ /* 初始状态中 autoCheckUpdate 默认为 false */
+-    appLogMaxCount: 12,
+-    autoCloseConnection: true,
+-    autoCheckUpdate: true,
+-    enableBuiltinEnhanced: true,
++    appLogMaxCount: 12,
++    autoCloseConnection: true,
++    // [CVR-PATCH] 默认关闭自动检查更新
++    autoCheckUpdate: false,
++    enableBuiltinEnhanced: true,
+@@ -0,0 +0,0 @@ /* 配置回退中 autoCheckUpdate 默认为 false */
+-        autoCloseConnection: verge?.auto_close_connection ?? true,
+-        autoCheckUpdate: verge?.auto_check_update ?? true,
+-        enableBuiltinEnhanced: verge?.enable_builtin_enhanced ?? true,
++        autoCloseConnection: verge?.auto_close_connection ?? true,
++        // [CVR-PATCH] 默认关闭自动检查更新
++        autoCheckUpdate: verge?.auto_check_update ?? false,
++        enableBuiltinEnhanced: verge?.enable_builtin_enhanced ?? true,
+
+diff --git a/src-tauri/src/config/verge.rs b/src-tauri/src/config/verge.rs
+--- a/src-tauri/src/config/verge.rs
++++ b/src-tauri/src/config/verge.rs
+@@ -0,0 +0,0 @@ /* 后端 verge.rs 默认 auto_check_update 设为 false */
+-            auto_close_connection: Some(true),
+-            auto_check_update: Some(true),
+-            enable_builtin_enhanced: Some(true),
++            auto_close_connection: Some(true),
++            // [CVR-PATCH] 默认关闭自动检查更新
++            auto_check_update: Some(false),
++            enable_builtin_enhanced: Some(true),
+
+diff --git a/src-tauri/src/core/updater.rs b/src-tauri/src/core/updater.rs
+--- a/src-tauri/src/core/updater.rs
++++ b/src-tauri/src/core/updater.rs
+@@ -0,0 +0,0 @@ /* SilentUpdater check_and_download 默认不自动下载更新 */
+-        let auto_check = Config::verge().await.latest_arc().auto_check_update.unwrap_or(true);
+-        if !auto_check {
+-            logging!(debug, Type::System, "Silent update skipped: auto_check_update is false");
+-            return Ok(());
+-        }
++        // [CVR-PATCH] 默认不自动执行后台静默检查与下载更新
++        let auto_check = Config::verge().await.latest_arc().auto_check_update.unwrap_or(false);
++        if !auto_check {
++            logging!(debug, Type::System, "Silent update skipped: auto_check_update is false");
++            return Ok(());
++        }
 

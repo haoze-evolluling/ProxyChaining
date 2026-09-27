@@ -233,6 +233,32 @@ namespace CvrProxyChainPatcher
             return true;
         }
 
+        public static void EnsureLocalBuildSigningSafe(string targetDir)
+        {
+            try
+            {
+                string confPath = Path.Combine(targetDir, "src-tauri", "tauri.conf.json");
+                if (!File.Exists(confPath)) return;
+
+                string privKey = Environment.GetEnvironmentVariable("TAURI_SIGNING_PRIVATE_KEY");
+                if (string.IsNullOrEmpty(privKey))
+                {
+                    string content = File.ReadAllText(confPath, Encoding.UTF8);
+                    if (content.Contains("\"createUpdaterArtifacts\": true") || content.Contains("\"createUpdaterArtifacts\":true"))
+                    {
+                        content = content.Replace("\"createUpdaterArtifacts\": true", "\"createUpdaterArtifacts\": false")
+                                         .Replace("\"createUpdaterArtifacts\":true", "\"createUpdaterArtifacts\": false");
+                        File.WriteAllText(confPath, content, Encoding.UTF8);
+                        ConsoleHelper.LogInfo("检测到未配置 TAURI_SIGNING_PRIVATE_KEY，已自动将 createUpdaterArtifacts 设为 false (规避本地签名报错)。");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ConsoleHelper.LogWarn("自动规避签名检查时异常: " + ex.Message);
+            }
+        }
+
         public static bool ExecuteBuild(string targetDir, BuildOptions options)
         {
             string triple = GetTriple(options.Arch);
@@ -244,6 +270,8 @@ namespace CvrProxyChainPatcher
                     return false;
                 }
             }
+
+            EnsureLocalBuildSigningSafe(targetDir);
 
             StringBuilder cmdBuilder = new StringBuilder();
             cmdBuilder.Append("pnpm tauri build --target ").Append(triple);

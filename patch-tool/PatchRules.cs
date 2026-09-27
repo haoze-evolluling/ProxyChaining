@@ -19,9 +19,16 @@ namespace CvrProxyChainPatcher
         public List<PatchChunk> Chunks { get; set; }
     }
 
-    public static class PatchRules
+    public static partial class PatchRules
     {
         public static List<PatchRule> GetRules()
+        {
+            var list = GetChainRules();
+            list.AddRange(GetUpdateRules());
+            return list;
+        }
+
+        private static List<PatchRule> GetChainRules()
         {
             return new List<PatchRule>
             {

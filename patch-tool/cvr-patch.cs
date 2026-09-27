@@ -22,8 +22,6 @@ namespace CvrProxyChainPatcher
 
     class Program
     {
-        const string DEFAULT_CVR_DIR = @"C:\Users\leehaoze\clash-verge-rev-dev";
-
         static readonly List<PatchRule> Rules = new List<PatchRule>
         {
             new PatchRule
@@ -605,12 +603,6 @@ namespace CvrProxyChainPatcher
                 return parent;
             }
 
-            // 6. 默认开发目录
-            if (IsClashVergeDir(DEFAULT_CVR_DIR))
-            {
-                return Path.GetFullPath(DEFAULT_CVR_DIR);
-            }
-
             return null;
         }
 
@@ -1107,6 +1099,14 @@ namespace CvrProxyChainPatcher
 
                 InteractiveMenu(targetDir);
                 return 0;
+            }
+
+            if (string.IsNullOrEmpty(targetDir) || !Directory.Exists(targetDir))
+            {
+                LogError("未能在 target-package 目录或默认路径自动定位到 Clash Verge Rev 项目！");
+                Console.WriteLine("提示: 请将待注入的源码放置在 target-package 目录下，或显式指定路径，例如:");
+                Console.WriteLine("      cvr-patch.exe " + args[0] + " \"D:\\clash-verge-rev\"");
+                return 1;
             }
 
             string command = args[0].ToLowerInvariant();

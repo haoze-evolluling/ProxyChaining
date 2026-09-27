@@ -23,9 +23,6 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 默认目标 Clash Verge Rev 开发目录
-const DEFAULT_CVR_DIR = 'C:\\Users\\leehaoze\\clash-verge-rev-dev';
-
 // ANSI 颜色辅助
 const colors = {
   reset: '\x1b[0m',
@@ -549,8 +546,6 @@ function resolveTargetDir(customDir) {
   const parent = path.resolve(current, '..');
   if (isClashVergeDir(parent)) return parent;
 
-  if (isClashVergeDir(DEFAULT_CVR_DIR)) return path.resolve(DEFAULT_CVR_DIR);
-
   throw new Error('未能在 target-package 目录或默认路径自动定位到 Clash Verge Rev 项目！请将待注入的程序包放入 target-package 目录下。');
 }
 
@@ -833,7 +828,7 @@ ${colors.bold}用法:${colors.reset}
   node cvr-patch.mjs <command> [target_dir] [options]
 
 ${colors.bold}命令:${colors.reset}
-  ${colors.green}status${colors.reset}        检查目标仓库的补丁注入状态 (默认目标: ${DEFAULT_CVR_DIR})
+  ${colors.green}status${colors.reset}        检查目标仓库的补丁注入状态 (默认目标: 自动探测或 CVR_DIR)
   ${colors.green}inject${colors.reset}        对目标仓库进行非侵入式修改，解除跨订阅限制并自动备份 (别名: apply)
   ${colors.green}restore${colors.reset}       从备份或反向替换完全撤销补丁，恢复原版代码 (别名: rollback, revert)
   ${colors.green}diff${colors.reset}          在终端中以 Unified Diff 格式展示所有的局部修改内容

@@ -1,77 +1,218 @@
 # Clash Verge Rev 跨订阅链式代理独立注入/补丁程序 (ProxyChaining)
 
-这是一个专为 **Clash Verge Rev** 设计的独立、非侵入式链式代理注入与补丁工具。
+这是一个专为 **Clash Verge Rev** 设计的独立、非侵入式链式代理注入与构建工具。
 
-在不改变 Clash Verge Rev 原项目架构的前提下，本工具通过精准的局部补丁，解除链式代理对单组 / 单订阅来源的限制，使得来自不同订阅或分组的节点能够自由组合成代理链（例如：**订阅 A 节点 → 订阅 B 节点**）。
+在不改变 Clash Verge Rev 原项目架构的前提下，本工具通过精准的局部补丁，解除链式代理对单组 / 单订阅来源的限制，使得来自不同订阅或不同分组的节点能够自由组合成代理链（例如：**订阅 A 入口节点 → 订阅 B 出口节点**）。同时内置客户端一键编译、环境自动安装、侧载内核预下载及官方更新屏蔽等全流程功能。
 
 ---
 
-## 项目结构与文件夹布局（首页三大核心目录）
-
-为了方便用户直接分发、放置程序与一键注入，本仓库根目录（首页）规划为清晰直观的 3 个功能文件夹：
-
-```text
-ProxyChaining/
-├── patch-tool/       # [1. 项目程序] 存放独立补丁注入工具 (cvr-patch.exe / 脚本 / 编译工具)
-├── target-package/   # [2. 待注入程序包] 供用户解压或放置目标 Clash Verge Rev 源码/程序
-└── instructions/     # [3. 说明及指引] 包含图文与操作步骤提示文档
-```
-
-- **`patch-tool/`**：内部包含编译好的原生独立 EXE（`cvr-patch.exe`）、Node.js 脚本与自动化构建脚本。程序已内置**智能探测机制**，双击运行时会自动穿透检测 `../target-package/` 下的目标程序，免去配置路径。
-- **`target-package/`**：用户将下载好的 Clash Verge Rev 源码或解压包直接丢进此文件夹即可，工具自动识别并匹配。
-- **`instructions/`**：内含 `【提示】请将待注入的程序包放在“target-package”目录下.txt`，为使用者提供指引。
+> [!WARNING]
+> ### 免责声明 (Disclaimer)
+> 1. **技术交流与学术研究**：本项目（ProxyChaining / cvr-patch）属于个人开源技术研究项目，仅用于网络协议研究、前端交互逻辑改进及开源代码技术交流，**严禁将本项目用于任何违反所在国家或地区法律法规的活动**。
+> 2. **合规性要求**：使用者在下载、使用本项目及其补丁代码、或基于本项目编译衍生版本时，须自行确保符合当地法律法规及网络运营管理规定。因违规使用而产生的任何法律责任，均由使用者自行承担。
+> 3. **第三方独立性**：本项目为非官方独立补丁工具，与 Clash Verge Rev 官方团队、Mihomo 内核团队及相关组织**均无任何商业关联或隶属关系**。相关软件商标、源码版权均归其各自原作者所有。
+> 4. **风险自担与无担保**：本工具按“现状（AS-IS）”提供，不提供任何明示或暗示的担保。虽然补丁工具内置了完善的文件自动备份与恢复机制，但使用者须自行承担代码修改、环境依赖变更、客户端构建及程序运行过程中可能带来的数据变动、配置异常或系统风险。作者不对因使用或无法使用本工具而导致的任何直接或间接损失承担责任。
+> 5. **知情同意**：凡以任何方式获取、下载、运行本工具（包括但不限于 Release 预编译程序、源码构建脚本等），即视为已完整阅读、充分理解并完全同意本声明的所有条款。
 
 ---
 
 ## 目录
-- [项目结构与文件夹布局（首页三大核心目录）](#项目结构与文件夹布局首页三大核心目录)
-- [一、核心问题与技术背景分析](#一核心问题与技术背景分析)
+- [核心特性概览](#核心特性概览)
+- [快速上手与使用指南（重点）](#快速上手与使用指南重点)
+  - [【推荐】场景一：从 Release 仅下载了单个 `cvr-patch.exe`](#推荐场景一从-release-仅下载了单个-cvr-patchexe)
+  - [场景二：使用克隆或下载的完整项目仓库](#场景二使用克隆或下载的完整项目仓库)
+  - [场景三：命令行 CLI 快捷指令汇总](#场景三命令行-cli-快捷指令汇总)
+- [一、修改文件清单与补丁详情](#一修改文件清单与补丁详情)
+- [二、核心问题与技术背景分析](#二核心问题与技术背景分析)
   - [1. 跨订阅节点被置灰（Opacity 0.55）的原因](#1-跨订阅节点被置灰opacity-055的原因)
   - [2. 无法跨订阅选择节点的原因](#2-无法跨订阅选择节点的原因)
   - [3. 跨订阅无法建立连接的原因](#3-跨订阅无法建立连接的原因)
   - [4. 全局模式下订阅节点不可见的原因](#4-全局模式下订阅节点不可见的原因)
-- [二、非侵入式补丁方案设计](#二非侵入式补丁方案设计)
-- [三、修改文件清单与改动详情](#三修改文件清单与改动详情)
-- [四、快速上手与使用方法](#四快速上手与使用方法)
-  - [1. 检查补丁状态](#1-检查补丁状态-status)
-  - [2. 一键注入补丁](#2-一键注入补丁-inject)
-  - [3. 一键撤销还原](#3-一键撤销还原-restore)
-  - [4. 查看变更差异](#4-查看变更差异-diff)
-  - [5. 导出标准补丁文件](#5-导出标准补丁文件-export-patch)
-- [五、安全与备份机制](#五安全与备份机制)
-- [六、Clash Verge Rev 后续升级与补丁同步指南](#六clash-verge-rev-后续升级与补丁同步指南)
+  - [5. 官方在线更新覆盖自定义版本的问题](#5-官方在线更新覆盖自定义版本的问题)
+- [三、非侵入式补丁架构设计](#三非侵入式补丁架构设计)
+- [四、安全与备份机制](#四安全与备份机制)
+- [五、Clash Verge Rev 后续升级与补丁同步指南](#五clash-verge-rev-后续升级与补丁同步指南)
 
 ---
 
-## 一、核心问题与技术背景分析
+## 核心特性概览
 
-Clash Verge Rev 原生的“链式代理”功能（基于 Mihomo 核心的 `dialer-proxy` 机制）在实现时做出了单组限制的假设，导致跨订阅或跨分组节点在建立代理链时出现以下三个核心问题：
+- 🔓 **跨订阅自由串联**：打破单订阅/单代理组壁垒，支持来自不同订阅提供者（Proxy Providers）及不同策略组的节点自由混搭成链。
+- 🎨 **前端 UI 完美修复**：切换分组不丢链条；跨订阅节点不再置灰（解决 `opacity: 0.55` 及按钮禁用问题）；全局链式模式下正常展现订阅节点。
+- ⚙️ **运行时内核动态注入**：自动解析并写入外部订阅节点至 Mihomo 核心的 `dialer-proxy` 链条，保证代理链路真实生效通畅。
+- 🛡️ **屏蔽官方在线更新**：自动屏蔽在线检查更新与覆盖弹窗，防止官方自动更新覆盖带有跨订阅功能的自定义编译版本。
+- 🚀 **开箱即用原生 EXE**：提供仅几十 KB 的绿色可执行文件 `cvr-patch.exe`，**零外部环境依赖**（无需提前安装 Node.js/Python），双击即用。
+- 🔨 **全自动构建与环境管理**：内置一键编译 Windows 客户端（支持纯 EXE、标准安装包、绿色 ZIP）、环境依赖检测与自动安装、以及侧载核心（Mihomo/Geo 规则）预下载。
+
+---
+
+## 快速上手与使用指南（重点）
+
+### 【推荐】场景一：从 Release 仅下载了单个 `cvr-patch.exe`
+
+如果您直接在 GitHub Releases 中下载了编译好的 `cvr-patch.exe` 单文件，而没有克隆整个 ProxyChaining 仓库，请按照以下极简步骤使用：
+
+#### 步骤 1：准备 Clash Verge Rev 源码
+由于本工具是通过修改源码中的逻辑来生成具备跨订阅功能的客户端，请先准备一份 Clash Verge Rev 源码：
+- **方式 A（下载 ZIP 包）**：前往 [Clash Verge Rev Releases](https://github.com/clash-verge-rev/clash-verge-rev/releases) 或代码主页，下载 `Source code (zip)` 并解压到本地任意目录（例如 `D:\clash-verge-rev`）。
+- **方式 B（Git 克隆）**：
+  ```bash
+  git clone https://github.com/clash-verge-rev/clash-verge-rev.git
+  ```
+
+#### 步骤 2：放置与运行 `cvr-patch.exe`（支持以下任一姿势）
+
+- **姿势 A（最推荐，零配置）：直接放进源码根目录**
+  - 把下载好的 `cvr-patch.exe` 复制到解压后的 `clash-verge-rev` 源码根目录下（即与 `package.json`、`src-tauri` 同级）。
+  - **直接双击运行 `cvr-patch.exe`**，程序会自动检测当前目录并直接进入操作主菜单！
+- **姿势 B（免移动）：任意位置双击 + 拖入目录**
+  - 无论 `cvr-patch.exe` 放在桌面还是下载文件夹，直接双击运行它。
+  - 程序检测不到默认路径时，会提示：
+    ```text
+    请输入代码根目录路径 (输入 0 退出):
+    ```
+  - 此时直接将解压后的 `clash-verge-rev` 文件夹**直接拖入控制台窗口**（或粘贴完整路径）后按回车即可。
+- **姿势 C（规范整理）：使用 target-package 目录**
+  - 在 `cvr-patch.exe` 同级目录下新建一个名为 `target-package` 的文件夹。
+  - 将 `clash-verge-rev` 文件夹放进 `target-package` 中。双击 `cvr-patch.exe`，程序会自动穿透识别。
+- **姿势 D（命令行直接调用）**：
+  ```cmd
+  cvr-patch.exe inject "D:\clash-verge-rev"
+  cvr-patch.exe build "D:\clash-verge-rev"
+  ```
+
+#### 步骤 3：交互菜单极简“两步走”（注入与编译）
+
+启动后将看到直观的主菜单：
+
+```text
+==================================================
+  Clash Verge Rev 跨订阅补丁工具
+==================================================
+目标路径: D:\clash-verge-rev
+补丁状态: 未注入 (0/10 模块)
+
+请选择操作:
+  [1] 注入补丁
+  [2] 还原原版
+  [3] 编译客户端     一键生成 Windows 运行程序或安装包
+  [4] 高级设置与工具 差异对比 / 导出补丁 / 环境检测 / 路径切换
+  [0] 退出
+```
+
+1. **第一步：输入 `1` 并回车（注入补丁）**
+   - 程序自动对原文件建立备份（生成 `.cvr-patch.bak` 与带时间戳的镜像）。
+   - 毫秒级注入跨订阅代理链核心补丁并屏蔽官方更新，状态将变为 `全部已生效 (10/10 模块)`。
+2. **第二步：输入 `3` 并回车（编译客户端）**
+   - **环境自动检测与安装**：向导会自动检查系统是否安装了 Node.js、pnpm、Rust、MSVC 构建工具。若有缺失，会提示是否一键自动安装，无需手动到处寻找安装包。
+   - **侧载资源自动准备**：自动下载匹配系统架构的 Mihomo 核心以及 GeoIP / GeoSite 规则文件。
+   - **签名避让**：自动规避私有签名密钥缺失导致的 Tauri 编译报错。
+   - **选择产物类型**：
+     - `1` 快速独立程序（纯 EXE，耗时最短，免安装极速调试，首推）
+     - `2` 标准安装包（Setup.exe，带安装向导）
+     - `3` 便携免安装包（ZIP 绿色版）
+   - **编译完成**：程序会自动弹出 Windows 资源管理器并高亮定位生成的客户端程序，双击即可直接使用！
+3. **如需还原**：随时输入 `2` 并回车，即可 100% 撤销补丁，恢复纯净官方源码。
+
+---
+
+### 场景二：使用克隆或下载的完整项目仓库
+
+如果您克隆或下载了本项目的完整仓库（包含 3 个核心文件夹结构）：
+
+```text
+ProxyChaining/
+├── patch-tool/       # [1. 项目程序] 存放 cvr-patch.exe、Node 脚本及编译工具
+├── target-package/   # [2. 待注入程序包] 供用户解压或放置目标 Clash Verge Rev 源码
+└── instructions/     # [3. 说明及指引] 包含图文与操作步骤提示文档
+```
+
+1. **放置源码**：将解压后的 Clash Verge Rev 源码文件夹丢进 `target-package/` 目录下。
+2. **启动工具**：进入 `patch-tool/` 目录，直接双击运行 `cvr-patch.exe`。
+3. **自动穿透识别**：工具会自动穿透扫描 `../target-package/`，无需任何配置，按菜单提示输入数字即可完成注入与编译。
+
+---
+
+### 场景三：命令行 CLI 快捷指令汇总
+
+对于熟悉命令行的开发者，`cvr-patch.exe` 支持完整的参数化调用：
+
+| 命令 / 指令 | 作用说明 | 典型示例 |
+| :--- | :--- | :--- |
+| `cvr-patch.exe` | 启动交互式控制台菜单（自动探测项目） | `.\cvr-patch.exe` |
+| `cvr-patch.exe inject [目录]` | 一键注入跨订阅与防更新补丁 | `.\cvr-patch.exe inject "D:\cvr"` |
+| `cvr-patch.exe restore [目录]` | 一键撤销还原为官方源码 | `.\cvr-patch.exe restore "D:\cvr"` |
+| `cvr-patch.exe status [目录]` | 检查当前各文件补丁注入状态 | `.\cvr-patch.exe status` |
+| `cvr-patch.exe diff [目录]` | 查看代码 Unified Diff 变更差异 | `.\cvr-patch.exe diff` |
+| `cvr-patch.exe export-patch` | 导出标准 `.patch` 补丁文件 | `.\cvr-patch.exe export-patch` |
+| `cvr-patch.exe check-env` | 检测本机前端与 Rust 编译依赖环境 | `.\cvr-patch.exe check-env` |
+| `cvr-patch.exe install-env` | 通过 winget / npm 自动安装缺失环境 | `.\cvr-patch.exe install-env` |
+| `cvr-patch.exe build [目录] [选项]` | 一键编译 Windows 客户端 | 见下方详细选项 |
+
+**编译常用选项：**
+```cmd
+# 极速编译 64 位纯 EXE 运行程序 (免打包, 耗时最短)
+cvr-patch.exe build --no-bundle --fast
+
+# 编译 64 位标准 NSIS 安装包 (Setup.exe)
+cvr-patch.exe build --nsis
+
+# 编译 64 位绿色免安装便携版 (ZIP)
+cvr-patch.exe build --portable
+
+# 仅预下载侧载核心资源 (Mihomo 内核、Service 与 Geo 规则)
+cvr-patch.exe build --prebuild-only
+```
+
+---
+
+## 一、修改文件清单与补丁详情
+
+本工具对 Clash Verge Rev 代码进行精准微创修改，共涉及以下 10 个核心模块（跨订阅链式代理 5 个 + 屏蔽官方更新 5 个）：
+
+| 文件路径 | 模块类型 | 修改目的 | 核心效果 |
+| :--- | :--- | :--- | :--- |
+| `src/components/proxy/proxy-chain-model.ts` | 前端模型 | 跨订阅节点保留已有 recordId | 节点不在当前活跃视图中时保留信息，防止连接按钮被禁用或置灰 |
+| `src/components/proxy/proxy-groups-chain.tsx` | 前端组件 | 候选集扩展 & 移除换组清空 | 切换订阅分组不丢失已选链条；跨订阅节点保留 `recordId` 不置灰 |
+| `src/components/proxy/proxy-chain.tsx` | 前端组件 | 全局候选集重绑 & 出口组动态匹配 | 链条卡片高亮；连接时自动匹配出口节点所在代理组与入口节点修正 |
+| `src/types/proxy-view.ts` | 前端类型 | 解除全局模式对 core 的过滤 | 全局模式下也能看到并选择订阅提供者（provider）节点建立代理链 |
+| `src-tauri/src/config/runtime.rs` | 后端 Rust | 运行时代理链注入逻辑增强 | 自动从外部 profiles 与 providers 中检索节点并注入 `dialer-proxy` |
+| `src/services/update.ts` | 前端服务 | 屏蔽在线更新检查服务与请求 | 静默屏蔽更新请求，防止官方更新提示与自动下载覆盖自定义版本 |
+| `src/hooks/use-update.ts` | 前端 Hook | 默认关闭自动检查更新定时器 | 避免客户端启动和运行时定期触发官方更新轮询 |
+| `src/components/setting/mods/misc-viewer.tsx` | 前端组件 | 设置界面更新开关默认关闭 | 将杂项设置中的自动检查更新开关默认值设为关闭 (false) |
+| `src-tauri/src/config/verge.rs` | 后端 Rust | 后端默认配置关闭更新检测 | 将后端全局配置中的默认 `auto_check_update` 设为 false |
+| `src-tauri/src/core/updater.rs` | 后端 Rust | 后端静默更新检测与清理残留 | 静默更新检测默认关闭，且在启动时清理残留的更新缓存 |
+
+---
+
+## 二、核心问题与技术背景分析
+
+Clash Verge Rev 原生链式代理基于 Mihomo 核心的 `dialer-proxy` 机制，但原版前端与配置写入逻辑假定了所有节点必须属于同一个策略组，从而导致以下问题：
 
 ### 1. 跨订阅节点被置灰（Opacity 0.55）的原因
-- **问题定位**：`src/components/proxy/proxy-groups-chain.tsx` 与 `src/components/proxy/proxy-chain.tsx`。
-- **机制**：前端对当前代理链内的节点调用 `rebindProxyChainItems(proxyChain, candidates, proxyView)` 进行重新绑定校验。原逻辑中 `candidates` **仅仅来自于当前选中的单一代理组（或当前渲染列表）**。
-- **结果**：当用户在分组 A 选中节点 1 后，切换到分组 B，此时候选集 `candidates` 只包含分组 B 的节点；节点 1 无法在 `candidates` 中匹配，导致其 `recordId` 变为 `undefined`。
-- **表象**：UI 判定 `proxy.recordId === undefined`，赋予卡片 `opacity: 0.55`（即节点被置灰），同时“连接”按钮因为 `currentProxyChain.some(({ recordId }) => recordId === undefined)` 而被禁用。
+- **机制**：前端对当前代理链内的节点调用 `rebindProxyChainItems(proxyChain, candidates, proxyView)` 进行校验。原逻辑中 `candidates` 仅仅来自于当前选中的单一代理组。
+- **结果**：当在分组 A 选中节点 1 后切换到分组 B，此时 `candidates` 仅包含分组 B 的节点；节点 1 无法匹配，其 `recordId` 变为 `undefined`。
+- **表象**：UI 判定 `proxy.recordId === undefined`，赋予卡片 `opacity: 0.55` 置灰样式，同时“连接”按钮因校验失败而被禁用。
 
 ### 2. 无法跨订阅选择节点的原因
-- **问题定位**：`src/components/proxy/proxy-groups-chain.tsx` 中的 `handleGroupSelect`。
-- **机制**：在原实现中，用户点击规则模式的分组下拉菜单切换分组时，函数内硬编码了 `setProxyChain([])` 以及清除 localStorage 的逻辑。
-- **结果**：用户每次切换分组浏览另一个订阅的节点，上一次选中的节点链就会被立刻清空，导致根本无法先后选中不同订阅的节点。
+- **机制**：在原实现 `src/components/proxy/proxy-groups-chain.tsx` 的 `handleGroupSelect` 中，用户切换分组时硬编码了 `setProxyChain([])` 以及清除本地存储的逻辑。
+- **结果**：用户每次切换分组浏览另一个订阅的节点，上一次选中的节点链就会被立刻清空。
 
 ### 3. 跨订阅无法建立连接的原因
-- **问题定位**：
-  1. **前端代理组匹配**：`handleConnect` 默认把 `targetGroup` 设为界面当前选中的 `selectedGroup`，并调用 `selectNodeForGroup(targetGroup, lastNode.name)`。如果出口节点 `lastNode` 来自订阅 B，但当前选中的界面分组是订阅 A，Mihomo API 会直接报错拒绝（因为订阅 A 的代理组不包含订阅 B 的节点）。
-  2. **后端运行时更新**：`src-tauri/src/config/runtime.rs` 中的 `update_proxy_chain_config` 仅在 `config["proxies"]` 中遍历寻找代理节点并插入 `dialer-proxy`。如果节点来自外部订阅文件（`proxy-providers`），该节点并不存在于主配置的 `proxies` 序列中，导致 `dialer-proxy` 根本无法写入生效。
+- **前端代理组匹配**：`handleConnect` 默认把当前界面的 `selectedGroup` 作为目标组。如果出口节点来自订阅 B，但当前选中的界面分组是订阅 A，Mihomo API 会因组内无此节点而报错拒绝。
+- **后端运行时更新**：`runtime.rs` 的 `update_proxy_chain_config` 仅在 `config["proxies"]` 中遍历寻找代理节点并插入 `dialer-proxy`。外部订阅文件（`proxy-providers`）中的节点并不在此序列中，导致 `dialer-proxy` 根本无法写入生效。
 
 ### 4. 全局模式下订阅节点不可见的原因
-- **问题定位**：`src/types/proxy-view.ts` 中的 `selectGlobalChainNodes`。
-- **机制**：原逻辑通过 `node.source.kind === 'core'` 进行硬过滤，导致所有来自订阅提供者（`kind === 'provider'`）的节点在全局链式代理列表中被完全剔除。
+- **机制**：`src/types/proxy-view.ts` 中的 `selectGlobalChainNodes` 原逻辑通过 `node.source.kind === 'core'` 进行硬过滤，导致所有来自订阅提供者的节点在全局链式代理列表中被完全剔除。
+
+### 5. 官方在线更新覆盖自定义版本的问题
+- 自定义编译的版本在运行一段时间后，Clash Verge Rev 的自动更新机制可能会检测到官方上游的新版本发布，并提示或下载官方安装包，覆盖掉带有跨订阅补丁的自定义构建。补丁工具通过中立屏蔽前端更新检测，保障自定义版本的持久稳定运行。
 
 ---
 
-## 二、非侵入式补丁方案设计
+## 三、非侵入式补丁架构设计
 
-为了避免破坏 Clash Verge Rev 原项目架构，便于未来版本更新时无缝移植，本补丁程序遵循**最小修改原则（Minimal Invasive Patching）**：
+本工具严格遵循**最小侵入性原则（Minimal Invasive Patching）**：
 
 ```
                 Clash Verge Rev 源码结构保持不变
@@ -80,149 +221,52 @@ Clash Verge Rev 原生的“链式代理”功能（基于 Mihomo 核心的 `dia
 [前台 UI] ─────┼─► proxy-groups-chain.tsx        │ ◄── 取消换组清空 + 全局候选重绑
                │   proxy-chain.tsx               │ ◄── 全局候选重绑 + 自动出口组匹配
                │   proxy-view.ts                 │ ◄── 解锁全局模式订阅节点
+               │   update.ts / use-update.ts     │ ◄── 屏蔽在线更新覆盖
                │                                 │
 [后台 Rust] ───┼─► runtime.rs                    │ ◄── 增强运行时 dialer-proxy 注入
                │                                 │     (支持 provider 节点动态注入)
                └─────────────────────────────────┘
 ```
 
-1. **零外部构建依赖**：注入程序使用纯 Node.js 标准库编写，无需额外 `npm install`。
-2. **纯局部替换**：不增加、删除任何源文件，不改变构建系统（Vite / Cargo / Tauri 配置全保留）。
-3. **安全双备份**：注入前自动在同级生成 `.cvr-patch.bak`，并在工具目录下建立带时间戳的历史镜像。
-4. **一键回滚**：提供无损 restore 功能，可随时将源码 100% 还原为官方初始状态。
+1. **纯局部替换**：不增加、删除任何源文件，不改动 Vite / Cargo / Tauri 构建骨架。
+2. **多语言同源实现**：同时提供轻量原生 C# 独立 EXE（零外部依赖）与标准 Node.js ESM 脚本。
+3. **无损还原能力**：随时提供一键 restore，100% 还原为官方初始状态。
 
 ---
 
-## 三、修改文件清单与改动详情
-
-| 文件路径 | 模块性质 | 修改目标 | 核心效果 |
-| :--- | :--- | :--- | :--- |
-| `src/components/proxy/proxy-groups-chain.tsx` | 前端组件 | 候选集扩展 & 移除分组重置 | 切换订阅分组不丢链；跨订阅节点保留 `recordId` 不置灰 |
-| `src/components/proxy/proxy-chain.tsx` | 前端组件 | 候选集扩展 & 出口组动态寻找 | 代理链卡片高亮显示；连接时自动匹配出口节点所在代理组 |
-| `src/types/proxy-view.ts` | 前端类型 | 解除全局链式代理对 core 的过滤 | 全局模式下也能看到并选择订阅节点建立代理链 |
-| `src-tauri/src/config/runtime.rs` | 后端 Rust | 运行时代理链注入逻辑增强 | 自动从 `proxy-providers` 文件中检索节点并注入 `dialer-proxy` |
-
----
-
-## 四、快速上手与使用方法
-
-本工具提供 **纯原生独立 EXE 程序**（适合无开发环境电脑）、**PowerShell 封装** 及 **Node.js 脚本** 三种使用方式。
-
-无论采用哪种方式，推荐的标准使用流程为：
-1. **解压目标包**：将待打补丁的 Clash Verge Rev 源码或程序包放入 `target-package/` 目录。
-2. **进入工具目录**：打开 `patch-tool/` 目录。
-3. **运行注入**：双击 `cvr-patch.exe` 按提示操作，工具会自动穿透检测 `target-package/` 并在备份后完成注入。
-
-### 方式 A：无环境电脑直接使用独立 EXE（推荐）
-在没有安装 Node.js、Python 或任何开发环境的电脑上：
-- **双击运行 `patch-tool/cvr-patch.exe`**：直接启动控制台交互式菜单，输入数字 `1` 即可一键注入补丁，输入 `2` 即可撤销还原，界面友好，执行完毕后按回车返回或退出。
-- **命令行方式**（在 `patch-tool` 目录下或指定路径执行）：
-  ```cmd
-  cd patch-tool
-
-  # 检查补丁状态 (自动扫描 ../target-package)
-  cvr-patch.exe status
-
-  # 一键注入补丁
-  cvr-patch.exe inject
-
-  # 一键撤销还原
-  cvr-patch.exe restore
-
-  # 查看变更差异
-  cvr-patch.exe diff
-
-  # 导出 patch 补丁文件
-  cvr-patch.exe export-patch
-
-  # 检查系统编译依赖环境 (Node.js, pnpm, Rust, MSVC, Git, WebView2)
-  cvr-patch.exe check-env
-
-  # 一键自动安装缺失编译环境 (通过 winget / npm)
-  cvr-patch.exe install-env
-
-  # 启动交互式 Windows 编译向导 (菜单包含多种架构与产物预设)
-  cvr-patch.exe build
-
-  # 命令行快捷编译 Windows 产物:
-  cvr-patch.exe build --no-bundle --fast   # 编译 Windows 64位纯 EXE (免打包, 极速调试首选)
-  cvr-patch.exe build --nsis               # 编译 Windows 64位标准 NSIS 安装包 (Setup.exe)
-  cvr-patch.exe build --portable           # 编译 Windows 64位绿色免安装版 (Portable ZIP)
-  cvr-patch.exe build --win-arm64 --fast   # 编译 Windows ARM64 架构产物
-  cvr-patch.exe build --prebuild-only      # 仅校验并下载侧载核心资源 (mihomo, service, 规则库)
-
-  # 亦可显式指定自定义项目路径
-  cvr-patch.exe inject "D:\Projects\clash-verge-rev"
-  cvr-patch.exe build "D:\Projects\clash-verge-rev" --no-bundle
-  ```
-
-### 方式 B：一键编译 EXE 脚本 (`build.bat` / `build.ps1`)
-如果需要重新编译或在其他电脑上从源码生成 `cvr-patch.exe`：
-- **进入 `patch-tool/`，双击 `build.bat`** 或在终端执行：
-  ```cmd
-  cd patch-tool
-  build.bat
-  ```
-  *脚本利用 Windows 10/11 系统自带的 .NET Framework 编译器 `csc.exe`，0 外部依赖，秒级生成体积仅 46KB 的原生可执行文件。*
-- **PowerShell 用户**：
-  ```powershell
-  cd patch-tool
-  .\build.ps1
-  # 或者通过 npm / pnpm
-  npm run build:exe
-  ```
-
-### 方式 C：通过脚本运行 (`patch.ps1` 或 `node cvr-patch.mjs`)
-如果系统已安装 Node.js 或已编译 EXE，也可直接使用脚本：
-```powershell
-cd patch-tool
-
-# 自动选择已编译 EXE 或 Node.js 执行 (优先探测 target-package)
-.\patch.ps1 status
-.\patch.ps1 inject
-.\patch.ps1 restore
-.\patch.ps1 diff
-.\patch.ps1 export-patch
-
-# 或者直接用 Node.js 运行
-node cvr-patch.mjs status
-node cvr-patch.mjs inject
-node cvr-patch.mjs restore
-```
-
----
-
-## 五、安全与备份机制
+## 四、安全与备份机制
 
 1. **同级备份（`.cvr-patch.bak`）**：
-   - 每次首次注入前，自动在原文件所在目录下生成 `.cvr-patch.bak`。
-   - `restore` 命令将优先以此备份为准恢复。
+   - 每次首次注入前，自动在被修改文件同目录下生成 `.cvr-patch.bak`。
+   - `restore` 命令优先以此备份为准恢复。
 2. **时间戳历史仓库（`backups/YYYY-MM-DD.../`）**：
    - 每次执行注入时，修改前的内容会被完整保存在 `backups/` 目录下，附带精确的执行时间。
-3. **行尾符兼容（CRLF / LF）**：
-   - 程序自动探测目标文件的换行风格（Windows CRLF 或 Linux/macOS LF），替换时严格维持原格式，避免引起 Git 全文件行尾变动的污染。
+3. **行尾符智能匹配（CRLF / LF）**：
+   - 程序自动探测目标文件的换行风格，修改时严格维持原格式，避免引起 Git 全文件换行符变动的脏提交。
 
 ---
 
-## 六、Clash Verge Rev 后续升级与补丁同步指南
+## 五、Clash Verge Rev 后续升级与补丁同步指南
 
-当后续拉取或合并上游 Clash Verge Rev 新版本时，推荐的工作流如下：
+当需要跟随上游 Clash Verge Rev 升级时，推荐的工作流如下：
 
 ```
 [上游更新]
    │
    ▼
-1. .\patch.ps1 restore         (将本地源码还原为纯净原版状态)
+1. cvr-patch.exe restore       (将本地源码还原为纯净原版状态)
    │
    ▼
 2. git pull / git merge        (拉取上游官方最新代码更新)
    │
    ▼
-3. .\patch.ps1 status          (检查新版本代码中补丁点的匹配情况)
+3. cvr-patch.exe status        (检查新版本代码中补丁点的匹配情况)
    │
    ▼
-4. .\patch.ps1 inject          (重新一键注入补丁)
+4. cvr-patch.exe inject        (重新一键注入补丁)
+   │
+   ▼
+5. cvr-patch.exe build         (重新一键编译新版客户端)
 ```
 
-- 若官方对涉及的文件做出了小幅格式调整，`cvr-patch.mjs` 中的 `PATCH_RULES` 采用的是局部代码块特征匹配，只需在 `cvr-patch.mjs` 中微调对应的 `find` 块文本即可再次精准对齐。
-- 由于没有增加任何额外的依赖或破坏性的工程改动，编译流程与官方原版完全一致（支持直接执行原项目的 `pnpm tauri dev` 或 `pnpm tauri build`）。
+若官方对涉及的代码格式进行了细微调整，补丁规则基于局部特征块匹配，仅需微调对应规则中的 `Find` 锚点即可再次精准对齐。

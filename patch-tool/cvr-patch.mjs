@@ -16,6 +16,7 @@
  *   5. Unlocks subscription nodes in Global chain mode.
  */
 
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -415,12 +416,25 @@ ${colors.bold}命令:${colors.reset}
   ${colors.green}restore${colors.reset}       从备份或反向替换完全撤销补丁，恢复原版代码 (别名: rollback, revert)
   ${colors.green}diff${colors.reset}          在终端中以 Unified Diff 格式展示所有的局部修改内容
   ${colors.green}export-patch${colors.reset}  导出标准 .patch 文件，供 git apply 使用
+  ${colors.green}build${colors.reset}         调用编译引擎自动编译 Clash Verge Windows 产物
+  ${colors.green}check-env${colors.reset}     检查系统编译环境状态
+  ${colors.green}install-env${colors.reset}   自动安装缺失的编译环境
+
+${colors.bold}编译选项 (配合 build 使用):${colors.reset}
+  --win-x64, --x64       Windows 64位目标 (默认)
+  --win-arm64, --arm64   Windows ARM64目标
+  --win-x86, --x86       Windows 32位目标
+  --no-bundle, --exe     仅编译独立程序 (纯 EXE, 跳过打包流程, 调试最快)
+  --nsis, --setup        标准 Windows NSIS 安装包 (Setup.exe)
+  --portable, --zip      绿色免安装便携版 (ZIP 压缩包)
+  --fast                 极速测试构建 (--profile fast-release)
+  --release              标准生产优化发布构建
 
 ${colors.bold}示例:${colors.reset}
   node cvr-patch.mjs status
   node cvr-patch.mjs inject
-  node cvr-patch.mjs restore
-  node cvr-patch.mjs inject "D:\\Projects\\clash-verge-rev"
+  node cvr-patch.mjs build --no-bundle --fast
+  node cvr-patch.mjs build --nsis
 `);
 }
 
@@ -462,6 +476,20 @@ function main() {
     case 'export-patch':
       cmdExportPatch(targetDir, args[2]);
       break;
+    case 'build':
+    case 'check-env':
+    case 'env':
+    case 'install-env': {
+      const exePath = path.join(__dirname, 'cvr-patch.exe');
+      if (fs.existsSync(exePath)) {
+        const proc = spawnSync(exePath, args, { stdio: 'inherit' });
+        process.exit(proc.status ?? 0);
+      } else {
+        log.error('未找到 cvr-patch.exe，请先运行 build.ps1 编译独立程序！');
+        process.exit(1);
+      }
+      break;
+    }
     default:
       log.error(`Unknown command: ${command}`);
       printHelp();

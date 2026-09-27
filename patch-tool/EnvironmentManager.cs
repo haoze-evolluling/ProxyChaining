@@ -32,6 +32,7 @@ namespace CvrProxyChainPatcher
         {
             try
             {
+                string procPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process) ?? "";
                 string machinePath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine) ?? "";
                 string userPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? "";
                 string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -41,11 +42,26 @@ namespace CvrProxyChainPatcher
                 string npmPath = Path.Combine(appData, "npm");
                 string pnpmPath = Path.Combine(localAppData, "pnpm");
 
-                string combined = machinePath + ";" + userPath;
-                if (Directory.Exists(cargoBin) && !combined.Contains(cargoBin)) combined += ";" + cargoBin;
-                if (Directory.Exists(npmPath) && !combined.Contains(npmPath)) combined += ";" + npmPath;
-                if (Directory.Exists(pnpmPath) && !combined.Contains(pnpmPath)) combined += ";" + pnpmPath;
+                List<string> entries = new List<string>();
+                if (Directory.Exists(cargoBin)) entries.Add(cargoBin);
+                if (Directory.Exists(pnpmPath)) entries.Add(pnpmPath);
+                if (Directory.Exists(npmPath)) entries.Add(npmPath);
 
+                string[] all = (procPath + ";" + userPath + ";" + machinePath).Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var e in entries) seen.Add(e);
+
+                foreach (var p in all)
+                {
+                    string trimmed = p.Trim();
+                    if (!string.IsNullOrEmpty(trimmed) && !seen.Contains(trimmed))
+                    {
+                        seen.Add(trimmed);
+                        entries.Add(trimmed);
+                    }
+                }
+
+                string combined = string.Join(";", entries.ToArray());
                 Environment.SetEnvironmentVariable("PATH", combined, EnvironmentVariableTarget.Process);
             }
             catch { }

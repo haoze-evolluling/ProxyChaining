@@ -141,13 +141,19 @@ Clash Verge Rev 原生的“链式代理”功能（基于 Mihomo 核心的 `dia
   # 一键自动安装缺失编译环境 (通过 winget / npm)
   cvr-patch.exe install-env
 
-  # 自动编译 Clash Verge 产物 (可选 --fast 极速构建)
+  # 启动交互式 Windows 编译向导 (菜单包含多种架构与产物预设)
   cvr-patch.exe build
-  cvr-patch.exe build --fast
+
+  # 命令行快捷编译 Windows 产物:
+  cvr-patch.exe build --no-bundle --fast   # 编译 Windows 64位纯 EXE (免打包, 极速调试首选)
+  cvr-patch.exe build --nsis               # 编译 Windows 64位标准 NSIS 安装包 (Setup.exe)
+  cvr-patch.exe build --portable           # 编译 Windows 64位绿色免安装版 (Portable ZIP)
+  cvr-patch.exe build --win-arm64 --fast   # 编译 Windows ARM64 架构产物
+  cvr-patch.exe build --prebuild-only      # 仅校验并下载侧载核心资源 (mihomo, service, 规则库)
 
   # 亦可显式指定自定义项目路径
   cvr-patch.exe inject "D:\Projects\clash-verge-rev"
-  cvr-patch.exe build "D:\Projects\clash-verge-rev"
+  cvr-patch.exe build "D:\Projects\clash-verge-rev" --no-bundle
   ```
 
 ### 方式 B：一键编译 EXE 脚本 (`build.bat` / `build.ps1`)

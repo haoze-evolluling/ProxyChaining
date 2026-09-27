@@ -1,4 +1,28 @@
-﻿diff --git a/src/components/proxy/proxy-groups-chain.tsx b/src/components/proxy/proxy-groups-chain.tsx
+﻿diff --git a/src/components/proxy/proxy-chain-model.ts b/src/components/proxy/proxy-chain-model.ts
+--- a/src/components/proxy/proxy-chain-model.ts
++++ b/src/components/proxy/proxy-chain-model.ts
+@@ -0,0 +0,0 @@ /* rebindProxyChainItems 保留跨订阅节点的已有属性 */
+-    const record =
+-      rebound === undefined ? undefined : getRecord(proxyView, rebound.recordId)
+-    return {
+-      ...item,
+-      recordId: rebound?.recordId,
+-      source: rebound?.source ?? item.source,
+-      type: rebound?.type ?? item.type,
+-      delay: record?.history.at(-1)?.delay,
+-    }
++    const record =
++      rebound === undefined ? undefined : getRecord(proxyView, rebound.recordId)
++    return {
++      ...item,
++      // [CVR-PATCH] 跨订阅支持：节点不在当前活跃视图中时，保留既有 recordId 与信息，防止按钮被禁用或节点置灰
++      recordId: rebound?.recordId ?? item.recordId ?? item.name,
++      source: rebound?.source ?? item.source,
++      type: rebound?.type ?? item.type,
++      delay: record?.history.at(-1)?.delay ?? item.delay,
++    }
+
+diff --git a/src/components/proxy/proxy-groups-chain.tsx b/src/components/proxy/proxy-groups-chain.tsx
 --- a/src/components/proxy/proxy-groups-chain.tsx
 +++ b/src/components/proxy/proxy-groups-chain.tsx
 @@ -0,0 +0,0 @@ /* 使用全量节点作为候选节点，防止切换分组时已选节点失去 recordId */
@@ -205,6 +229,42 @@ diff --git a/src/components/proxy/proxy-chain.tsx b/src/components/proxy/proxy-c
 +      recordSelection(targetGroup || 'GLOBAL', lastNode.name)
 +      localStorage.setItem('proxy-chain-group', targetGroup || 'GLOBAL')
 +      localStorage.setItem('proxy-chain-exit-node', lastNode.name)
+@@ -0,0 +0,0 @@ /* 解除连接节点校验必须带有 recordId 的硬限制，允许跨订阅节点连接 */
+-    if (
+-      currentProxyChain.length < 2 ||
+-      currentProxyChain.some(({ recordId }) => !recordId)
+-    ) {
+-      alert(t('proxies.page.chain.minimumNodes'))
+-      return
+-    }
++    // [CVR-PATCH] 跨订阅支持：节点校验放宽，只要节点存在合法名称即可发起代理链连接
++    if (
++      currentProxyChain.length < 2 ||
++      currentProxyChain.some((item) => !item || !item.name)
++    ) {
++      alert(t('proxies.page.chain.minimumNodes'))
++      return
++    }
+@@ -0,0 +0,0 @@ /* 解除连接按钮 disabled 判定中对 recordId 的依赖 */
+-            disabled={
+-              isConnecting ||
+-              (!isConnected &&
+-                (currentProxyChain.length < 2 ||
+-                  currentProxyChain.some(
+-                    ({ recordId }) => recordId === undefined,
+-                  ) ||
+-                  (mode === 'global' && proxyView?.global === null) ||
+-                  (mode !== 'global' && !selectedGroup)))
+-            }
++            // [CVR-PATCH] 跨订阅支持：只要节点有名字即可启用连接按钮，不再因 recordId 未在当前活跃视图中而变灰禁用
++            disabled={
++              isConnecting ||
++              (!isConnected &&
++                (currentProxyChain.length < 2 ||
++                  currentProxyChain.some((item) => !item || !item.name) ||
++                  (mode === 'global' && proxyView?.global === null) ||
++                  (mode !== 'global' && !selectedGroup)))
++            }
 
 diff --git a/src/types/proxy-view.ts b/src/types/proxy-view.ts
 --- a/src/types/proxy-view.ts
@@ -258,7 +318,7 @@ diff --git a/src/types/proxy-view.ts b/src/types/proxy-view.ts
 diff --git a/src-tauri/src/config/runtime.rs b/src-tauri/src/config/runtime.rs
 --- a/src-tauri/src/config/runtime.rs
 +++ b/src-tauri/src/config/runtime.rs
-@@ -0,0 +0,0 @@ /* update_proxy_chain_config 支持跨订阅/provider 节点识别与注入 */
+@@ -0,0 +0,0 @@ /* update_proxy_chain_config 支持全订阅节点扫描、完整注入与链条绑定 */
 -    /// Rebuilds `dialer-proxy` links from an ordered proxy chain, or removes them for `None`.
 -    #[inline]
 -    pub fn update_proxy_chain_config(&mut self, proxy_chain_config: Option<Value>) {
@@ -320,43 +380,51 @@ diff --git a/src-tauri/src/config/runtime.rs b/src-tauri/src/config/runtime.rs
 +                config.insert("proxies".into(), Value::Sequence(Vec::new()));
 +            }
 +
-+            // [CVR-PATCH] 如果链中有节点不在主配置的 proxies 中（例如来自 proxy-providers），从 provider 文件中查找并注入
++            // [CVR-PATCH] 跨订阅节点全量扫描：收集订阅 profiles 目录与 proxy-providers 下所有 yaml 文件
++            let mut search_paths: Vec<std::path::PathBuf> = Vec::new();
++            if let Ok(profiles_dir) = crate::utils::dirs::app_profiles_dir() {
++                if let Ok(entries) = std::fs::read_dir(profiles_dir) {
++                    for entry in entries.flatten() {
++                        let path = entry.path();
++                        if path.extension().and_then(|s| s.to_str()) == Some("yaml") {
++                            search_paths.push(path);
++                        }
++                    }
++                }
++            }
++
 +            let app_home = crate::utils::dirs::app_home_dir().ok();
 +            if let Some(Value::Mapping(providers)) = config.get("proxy-providers") {
-+                let provider_paths: Vec<std::path::PathBuf> = providers
-+                    .values()
-+                    .filter_map(|p| p.get("path").and_then(Value::as_str))
-+                    .filter_map(|p| {
-+                        let path = std::path::Path::new(p);
-+                        if path.is_absolute() {
-+                            Some(path.to_path_buf())
-+                        } else {
-+                            app_home.as_ref().map(|home| home.join(path))
-+                        }
-+                    })
-+                    .collect();
++                for p in providers.values().filter_map(|p| p.get("path").and_then(Value::as_str)) {
++                    let path = std::path::Path::new(p);
++                    if path.is_absolute() {
++                        search_paths.push(path.to_path_buf());
++                    } else if let Some(home) = app_home.as_ref() {
++                        search_paths.push(home.join(path));
++                    }
++                }
++            }
 +
-+                if let Some(Value::Sequence(proxies)) = config.get_mut("proxies") {
-+                    for (i, dialer_proxy) in dialer_proxies.iter().enumerate() {
-+                        if i == 0 {
-+                            continue;
-+                        }
-+                        let exists = proxies.iter().any(|p| p.get("name") == Some(dialer_proxy));
-+                        if !exists {
-+                            for path in &provider_paths {
-+                                if let Ok(content) = std::fs::read_to_string(path)
-+                                    && let Ok(provider_yaml) = serde_yaml_ng::from_str::<Mapping>(&content)
-+                                    && let Some(Value::Sequence(p_nodes)) = provider_yaml.get("proxies")
-+                                {
-+                                    if let Some(found_node) = p_nodes.iter().find(|n| n.get("name") == Some(dialer_proxy)) {
-+                                        if let Some(mut cloned_map) = found_node.as_mapping().cloned() {
-+                                            if let Some(prev_proxy) = dialer_proxies.get(i - 1) {
-+                                                cloned_map.insert("dialer-proxy".into(), prev_proxy.to_owned());
-+                                                cloned_map.insert("_injected_chain_proxy".into(), Value::Bool(true));
-+                                                proxies.push(Value::Mapping(cloned_map));
-+                                                break;
-+                                            }
++            // 针对链中每一个节点（包括入口节点与后续节点），若不在当前主配置中，则从订阅文件中找到并完整注入
++            if let Some(Value::Sequence(proxies)) = config.get_mut("proxies") {
++                for (i, dialer_proxy) in dialer_proxies.iter().enumerate() {
++                    let exists = proxies.iter().any(|p| p.get("name") == Some(dialer_proxy));
++                    if !exists {
++                        for path in &search_paths {
++                            if let Ok(content) = std::fs::read_to_string(path)
++                                && let Ok(yaml_data) = serde_yaml_ng::from_str::<Mapping>(&content)
++                                && let Some(Value::Sequence(p_nodes)) = yaml_data.get("proxies")
++                            {
++                                if let Some(found_node) = p_nodes.iter().find(|n| n.get("name") == Some(dialer_proxy)) {
++                                    if let Some(mut cloned_map) = found_node.as_mapping().cloned() {
++                                        if i != 0 && let Some(prev_proxy) = dialer_proxies.get(i - 1) {
++                                            cloned_map.insert("dialer-proxy".into(), prev_proxy.to_owned());
++                                        } else {
++                                            cloned_map.remove("dialer-proxy");
 +                                        }
++                                        cloned_map.insert("_injected_chain_proxy".into(), Value::Bool(true));
++                                        proxies.push(Value::Mapping(cloned_map));
++                                        break;
 +                                    }
 +                                }
 +                            }
@@ -365,14 +433,17 @@ diff --git a/src-tauri/src/config/runtime.rs b/src-tauri/src/config/runtime.rs
 +                }
 +            }
 +
++            // 统一为链式代理节点绑定正确的上游 dialer-proxy（入口节点移除 dialer-proxy）
 +            if let Some(Value::Sequence(proxies)) = config.get_mut("proxies") {
 +                for (i, dialer_proxy) in dialer_proxies.iter().enumerate() {
 +                    if let Some(Value::Mapping(proxy)) =
 +                        proxies.iter_mut().find(|proxy| proxy.get("name") == Some(dialer_proxy))
-+                        && i != 0
-+                        && let Some(dialer_proxy) = dialer_proxies.get(i - 1)
 +                    {
-+                        proxy.insert("dialer-proxy".into(), dialer_proxy.to_owned());
++                        if i != 0 && let Some(prev_proxy) = dialer_proxies.get(i - 1) {
++                            proxy.insert("dialer-proxy".into(), prev_proxy.to_owned());
++                        } else {
++                            proxy.remove("dialer-proxy");
++                        }
 +                    }
 +                }
 +            }

@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 setlocal enabledelayedexpansion
 chcp 65001 >nul
 
@@ -28,10 +28,10 @@ if "%CSC_EXE%"=="" (
 )
 
 echo [INFO] 使用编译器: %CSC_EXE%
-echo [INFO] 正在编译 cvr-patch.cs 为独立 EXE 程序...
+echo [INFO] 正在编译 C# 源码为独立 EXE 程序...
 echo.
 
-"%CSC_EXE%" /nologo /target:exe /optimize+ /platform:anycpu /out:"%SCRIPT_DIR%cvr-patch.exe" "%SCRIPT_DIR%cvr-patch.cs"
+"%CSC_EXE%" /nologo /target:exe /optimize+ /platform:anycpu /out:"%SCRIPT_DIR%cvr-patch.exe" "%SCRIPT_DIR%*.cs"
 
 if %ERRORLEVEL% equ 0 (
     echo.

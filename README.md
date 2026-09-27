@@ -135,8 +135,19 @@ Clash Verge Rev 原生的“链式代理”功能（基于 Mihomo 核心的 `dia
   # 导出 patch 补丁文件
   cvr-patch.exe export-patch
 
+  # 检查系统编译依赖环境 (Node.js, pnpm, Rust, MSVC, Git, WebView2)
+  cvr-patch.exe check-env
+
+  # 一键自动安装缺失编译环境 (通过 winget / npm)
+  cvr-patch.exe install-env
+
+  # 自动编译 Clash Verge 产物 (可选 --fast 极速构建)
+  cvr-patch.exe build
+  cvr-patch.exe build --fast
+
   # 亦可显式指定自定义项目路径
   cvr-patch.exe inject "D:\Projects\clash-verge-rev"
+  cvr-patch.exe build "D:\Projects\clash-verge-rev"
   ```
 
 ### 方式 B：一键编译 EXE 脚本 (`build.bat` / `build.ps1`)

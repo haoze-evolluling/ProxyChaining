@@ -13,7 +13,10 @@
     "diff": "node cvr-patch.mjs diff",
     "export-patch": "node cvr-patch.mjs export-patch",
     "build": "powershell -ExecutionPolicy Bypass -File build.ps1 -NoPause",
-    "build:exe": "powershell -ExecutionPolicy Bypass -File build.ps1 -NoPause"
+    "build:exe": "powershell -ExecutionPolicy Bypass -File build.ps1 -NoPause",
+    "compile": ".\\cvr-patch.exe build",
+    "check-env": ".\\cvr-patch.exe check-env",
+    "install-env": ".\\cvr-patch.exe install-env"
   },
   "keywords": [
     "clash-verge-rev",

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Clash Verge Rev 跨订阅链式代理独立注入 / 补丁程序 (PowerShell 封装)
 .DESCRIPTION
@@ -15,7 +15,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('status', 'check', 'inject', 'apply', 'restore', 'rollback', 'revert', 'diff', 'export-patch', 'help')]
+    [ValidateSet('status', 'check', 'inject', 'apply', 'restore', 'rollback', 'revert', 'diff', 'export-patch', 'build', 'check-env', 'install-env', 'help')]
     [string]$Command = 'status',
 
     [Parameter(Position = 1)]

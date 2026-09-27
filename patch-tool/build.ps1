@@ -47,12 +47,12 @@ if (-not $cscPath) {
 }
 
 Write-Host "[INFO] 编译器路径: $cscPath" -ForegroundColor DarkGray
-Write-Host "[INFO] 正在编译 cvr-patch.cs -> cvr-patch.exe ..." -ForegroundColor Green
+Write-Host "[INFO] 正在编译 C# 源码 -> cvr-patch.exe ..." -ForegroundColor Green
 
-$sourceFile = Join-Path $scriptDir "cvr-patch.cs"
 $outFile = Join-Path $scriptDir "cvr-patch.exe"
+$sourcePattern = Join-Path $scriptDir "*.cs"
 
-$process = Start-Process -FilePath $cscPath -ArgumentList "/nologo /target:exe /optimize+ /platform:anycpu /out:`"$outFile`" `"$sourceFile`"" -NoNewWindow -Wait -PassThru
+$process = Start-Process -FilePath $cscPath -ArgumentList "/nologo /target:exe /optimize+ /platform:anycpu /out:`"$outFile`" `"$sourcePattern`"" -NoNewWindow -Wait -PassThru
 
 if ($process.ExitCode -eq 0) {
     $exeItem = Get-Item $outFile

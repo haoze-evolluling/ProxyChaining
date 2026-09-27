@@ -6,7 +6,25 @@
 
 ---
 
+## 项目结构与文件夹布局（首页三大核心目录）
+
+为了方便用户直接分发、放置程序与一键注入，本仓库根目录（首页）规划为清晰直观的 3 个功能文件夹：
+
+```text
+ProxyChaining/
+├── patch-tool/       # [1. 项目程序] 存放独立补丁注入工具 (cvr-patch.exe / 脚本 / 编译工具)
+├── target-package/   # [2. 待注入程序包] 供用户解压或放置目标 Clash Verge Rev 源码/程序
+└── instructions/     # [3. 说明及指引] 包含图文与操作步骤提示文档
+```
+
+- **`patch-tool/`**：内部包含编译好的原生独立 EXE（`cvr-patch.exe`）、Node.js 脚本与自动化构建脚本。程序已内置**智能探测机制**，双击运行时会自动穿透检测 `../target-package/` 下的目标程序，免去配置路径。
+- **`target-package/`**：用户将下载好的 Clash Verge Rev 源码或解压包直接丢进此文件夹即可，工具自动识别并匹配。
+- **`instructions/`**：内含 `【提示】请将待注入的程序包放在“target-package”目录下.txt`，为使用者提供指引。
+
+---
+
 ## 目录
+- [项目结构与文件夹布局（首页三大核心目录）](#项目结构与文件夹布局首页三大核心目录)
 - [一、核心问题与技术背景分析](#一核心问题与技术背景分析)
   - [1. 跨订阅节点被置灰（Opacity 0.55）的原因](#1-跨订阅节点被置灰opacity-055的原因)
   - [2. 无法跨订阅选择节点的原因](#2-无法跨订阅选择节点的原因)
@@ -88,36 +106,50 @@ Clash Verge Rev 原生的“链式代理”功能（基于 Mihomo 核心的 `dia
 
 ## 四、快速上手与使用方法
 
-本工具提供 **纯原生独立 EXE 程序**（适合无开发环境电脑）、**PowerShell 封装** 及 **Node.js 脚本** 三种使用方式。默认目标目录会自动检测当前目录、父目录或 `C:\Users\leehaoze\clash-verge-rev-dev`（也可通过命令行参数显式指定）。
+本工具提供 **纯原生独立 EXE 程序**（适合无开发环境电脑）、**PowerShell 封装** 及 **Node.js 脚本** 三种使用方式。
+
+无论采用哪种方式，推荐的标准使用流程为：
+1. **解压目标包**：将待打补丁的 Clash Verge Rev 源码或程序包放入 `target-package/` 目录。
+2. **进入工具目录**：打开 `patch-tool/` 目录。
+3. **运行注入**：双击 `cvr-patch.exe` 按提示操作，工具会自动穿透检测 `target-package/` 并在备份后完成注入。
 
 ### 方式 A：无环境电脑直接使用独立 EXE（推荐）
 在没有安装 Node.js、Python 或任何开发环境的电脑上：
-- **双击运行 `cvr-patch.exe`**：直接启动控制台交互式菜单，输入数字 `1` 即可一键注入补丁，输入 `2` 即可撤销还原，界面友好，执行完毕后按回车返回或退出。
-- **命令行方式**：
+- **双击运行 `patch-tool/cvr-patch.exe`**：直接启动控制台交互式菜单，输入数字 `1` 即可一键注入补丁，输入 `2` 即可撤销还原，界面友好，执行完毕后按回车返回或退出。
+- **命令行方式**（在 `patch-tool` 目录下或指定路径执行）：
   ```cmd
-  # 检查补丁状态
+  cd patch-tool
+
+  # 检查补丁状态 (自动扫描 ../target-package)
   cvr-patch.exe status
+
   # 一键注入补丁
   cvr-patch.exe inject
+
   # 一键撤销还原
   cvr-patch.exe restore
+
   # 查看变更差异
   cvr-patch.exe diff
+
   # 导出 patch 补丁文件
   cvr-patch.exe export-patch
-  # 指定自定义项目路径
+
+  # 亦可显式指定自定义项目路径
   cvr-patch.exe inject "D:\Projects\clash-verge-rev"
   ```
 
 ### 方式 B：一键编译 EXE 脚本 (`build.bat` / `build.ps1`)
 如果需要重新编译或在其他电脑上从源码生成 `cvr-patch.exe`：
-- **双击 `build.bat`** 或在终端执行：
+- **进入 `patch-tool/`，双击 `build.bat`** 或在终端执行：
   ```cmd
+  cd patch-tool
   build.bat
   ```
-  *脚本利用 Windows 10/11 系统自带的 .NET Framework 编译器 `csc.exe`，0 外部依赖，秒级生成体积仅 44KB 的原生可执行文件。*
+  *脚本利用 Windows 10/11 系统自带的 .NET Framework 编译器 `csc.exe`，0 外部依赖，秒级生成体积仅 46KB 的原生可执行文件。*
 - **PowerShell 用户**：
   ```powershell
+  cd patch-tool
   .\build.ps1
   # 或者通过 npm / pnpm
   npm run build:exe
@@ -126,7 +158,9 @@ Clash Verge Rev 原生的“链式代理”功能（基于 Mihomo 核心的 `dia
 ### 方式 C：通过脚本运行 (`patch.ps1` 或 `node cvr-patch.mjs`)
 如果系统已安装 Node.js 或已编译 EXE，也可直接使用脚本：
 ```powershell
-# 自动选择已编译 EXE 或 Node.js 执行
+cd patch-tool
+
+# 自动选择已编译 EXE 或 Node.js 执行 (优先探测 target-package)
 .\patch.ps1 status
 .\patch.ps1 inject
 .\patch.ps1 restore

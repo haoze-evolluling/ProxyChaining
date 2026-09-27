@@ -2,4 +2,9 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+patch-tool/backups/
 backups/
+
+# 忽略 target-package 中的大型源码与安装包，保留占位 .gitkeep
+target-package/*
+!target-package/.gitkeep

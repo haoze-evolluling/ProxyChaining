@@ -483,19 +483,75 @@ const PATCH_RULES = [
   },
 ];
 
+function isClashVergeDir(dir) {
+  if (!dir || !fs.existsSync(dir)) return false;
+  const proxyGroups = path.join(dir, 'src', 'components', 'proxy', 'proxy-groups-chain.tsx');
+  const tauri = path.join(dir, 'src-tauri');
+  return fs.existsSync(proxyGroups) && fs.existsSync(tauri);
+}
+
+function checkPackageDir(dir) {
+  if (!dir || !fs.existsSync(dir)) return null;
+  try {
+    const full = path.resolve(dir);
+    if (isClashVergeDir(full)) return full;
+
+    const subDirs = fs.readdirSync(full, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => path.join(full, d.name));
+
+    for (const sub of subDirs) {
+      if (isClashVergeDir(sub)) return path.resolve(sub);
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 /**
- * 校验目标 Clash Verge Rev 仓库
+ * 校验与解析目标 Clash Verge Rev 仓库
  */
 function resolveTargetDir(customDir) {
-  const target = customDir || process.env.CVR_DIR || DEFAULT_CVR_DIR;
-  if (!fs.existsSync(target)) {
-    throw new Error(`Target Clash Verge Rev directory does not exist: ${target}`);
+  if (customDir) {
+    if (!fs.existsSync(customDir)) {
+      throw new Error(`指定的目录不存在: ${customDir}`);
+    }
+    const pkgMatch = checkPackageDir(customDir);
+    if (pkgMatch) return pkgMatch;
+    if (!isClashVergeDir(customDir)) {
+      throw new Error(`指定目录不是 Clash Verge Rev 仓库 (缺少 package.json/src-tauri): ${customDir}`);
+    }
+    return path.resolve(customDir);
   }
-  const pkgPath = path.join(target, 'package.json');
-  if (!fs.existsSync(pkgPath)) {
-    throw new Error(`Target directory is not a Clash Verge Rev repository (missing package.json): ${target}`);
+
+  if (process.env.CVR_DIR) {
+    const pkgMatch = checkPackageDir(process.env.CVR_DIR);
+    if (pkgMatch) return pkgMatch;
+    if (isClashVergeDir(process.env.CVR_DIR)) return path.resolve(process.env.CVR_DIR);
   }
-  return path.resolve(target);
+
+  const current = process.cwd();
+  const candidateTargetDirs = [
+    path.join(current, 'target-package'),
+    path.join(current, '..', 'target-package'),
+    path.join(__dirname, 'target-package'),
+    path.join(__dirname, '..', 'target-package'),
+  ];
+
+  for (const cand of candidateTargetDirs) {
+    const found = checkPackageDir(cand);
+    if (found) return found;
+  }
+
+  if (isClashVergeDir(current)) return path.resolve(current);
+
+  const parent = path.resolve(current, '..');
+  if (isClashVergeDir(parent)) return parent;
+
+  if (isClashVergeDir(DEFAULT_CVR_DIR)) return path.resolve(DEFAULT_CVR_DIR);
+
+  throw new Error('未能在 target-package 目录或默认路径自动定位到 Clash Verge Rev 项目！请将待注入的程序包放入 target-package 目录下。');
 }
 
 /**

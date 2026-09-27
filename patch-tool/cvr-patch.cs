@@ -532,40 +532,80 @@ namespace CvrProxyChainPatcher
             return File.Exists(proxyGroups) && Directory.Exists(tauri);
         }
 
+        static string CheckPackageDir(string dir)
+        {
+            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return null;
+            try
+            {
+                string full = Path.GetFullPath(dir);
+                if (IsClashVergeDir(full)) return full;
+
+                // 穿透检测第一层子目录 (例如解压得到的 clash-verge-rev-xxx 文件夹)
+                string[] subDirs = Directory.GetDirectories(full);
+                foreach (var sub in subDirs)
+                {
+                    if (IsClashVergeDir(sub)) return Path.GetFullPath(sub);
+                }
+            }
+            catch { }
+            return null;
+        }
+
         static string ResolveTargetDir(string customDir)
         {
-            // 1. Explicit argument
+            // 1. 显式指定参数
             if (!string.IsNullOrEmpty(customDir))
             {
                 if (!Directory.Exists(customDir))
                     throw new DirectoryNotFoundException("指定的目录不存在: " + customDir);
+                string pkgMatch = CheckPackageDir(customDir);
+                if (pkgMatch != null) return pkgMatch;
                 if (!IsClashVergeDir(customDir))
                     throw new InvalidOperationException("指定目录不是 Clash Verge Rev 仓库 (缺少 package.json/src-tauri): " + customDir);
                 return Path.GetFullPath(customDir);
             }
 
-            // 2. Environment variable
+            // 2. 环境变量 CVR_DIR
             string envDir = Environment.GetEnvironmentVariable("CVR_DIR");
-            if (!string.IsNullOrEmpty(envDir) && IsClashVergeDir(envDir))
+            if (!string.IsNullOrEmpty(envDir))
             {
-                return Path.GetFullPath(envDir);
+                string pkgMatch = CheckPackageDir(envDir);
+                if (pkgMatch != null) return pkgMatch;
+                if (IsClashVergeDir(envDir)) return Path.GetFullPath(envDir);
             }
 
-            // 3. Current Directory
+            // 3. 自动探测 target-package 目录 (支持当前工作目录或 exe 所在目录的同级/父级)
             string current = Directory.GetCurrentDirectory();
+            string appBase = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            string[] candidateTargetDirs = new string[]
+            {
+                Path.Combine(current, "target-package"),
+                Path.Combine(current, "..", "target-package"),
+                Path.Combine(appBase, "target-package"),
+                Path.Combine(appBase, "..", "target-package")
+            };
+
+            foreach (var cand in candidateTargetDirs)
+            {
+                string found = CheckPackageDir(cand);
+                if (found != null) return found;
+            }
+
+            // 4. 当前工作目录
             if (IsClashVergeDir(current))
             {
                 return Path.GetFullPath(current);
             }
 
-            // 4. Parent Directory
+            // 5. 上级目录
             string parent = Path.GetFullPath(Path.Combine(current, ".."));
             if (IsClashVergeDir(parent))
             {
                 return parent;
             }
 
-            // 5. Default directory
+            // 6. 默认开发目录
             if (IsClashVergeDir(DEFAULT_CVR_DIR))
             {
                 return Path.GetFullPath(DEFAULT_CVR_DIR);
@@ -1047,8 +1087,9 @@ namespace CvrProxyChainPatcher
                     Console.WriteLine("==============================================================");
                     WriteColor("  Clash Verge Rev 跨订阅链式代理独立补丁程序 (ProxyChaining)\n", ConsoleColor.Cyan);
                     Console.WriteLine("==============================================================\n");
-                    LogWarn("未能在当前目录或默认路径自动定位到 Clash Verge Rev 项目！");
-                    Console.Write("请输入 Clash Verge Rev 代码根目录路径 (输入 0 退出): ");
+                    LogWarn("未能在 target-package 目录或默认路径自动定位到 Clash Verge Rev 项目！");
+                    Console.WriteLine("提示: 请将待注入的 Clash Verge Rev 源码或程序包解压放置在 target-package 目录下。");
+                    Console.Write("或者手动输入 Clash Verge Rev 代码根目录路径 (输入 0 退出): ");
                     string inRaw = Console.ReadLine();
                     string input = inRaw != null ? inRaw.Trim('"', ' ', '\'') : null;
                     if (input == "0" || string.IsNullOrEmpty(input)) return 0;

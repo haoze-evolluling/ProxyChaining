@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Clash Verge Rev 跨订阅链式代理独立注入 / 补丁程序 (PowerShell 封装)
 .DESCRIPTION
@@ -19,7 +19,7 @@ param(
     [string]$Command = 'status',
 
     [Parameter(Position = 1)]
-    [string]$TargetDir = 'C:\Users\leehaoze\clash-verge-rev-dev'
+    [string]$TargetDir = ''
 )
 
 $exePath = Join-Path $PSScriptRoot "cvr-patch.exe"

@@ -509,10 +509,10 @@ namespace CvrProxyChainPatcher
                 return;
             }
 
-            ConsoleHelper.LogHeader("Clash Verge Rev 生成产物列表");
-            Console.WriteLine("--------------------------------------------------------------------------------");
+            ConsoleHelper.LogHeader("生成产物列表");
+            ConsoleHelper.WriteLineColor("--------------------------------------------------------------------------------", ConsoleColor.DarkGray);
             Console.WriteLine(string.Format("{0,-35} | {1,-10} | {2,-19} | {3}", "文件名", "体积", "生成时间", "完整路径"));
-            Console.WriteLine("--------------------------------------------------------------------------------");
+            ConsoleHelper.WriteLineColor("--------------------------------------------------------------------------------", ConsoleColor.DarkGray);
 
             foreach (var f in artifacts)
             {
@@ -520,7 +520,7 @@ namespace CvrProxyChainPatcher
                 string timeStr = f.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss");
                 Console.WriteLine(string.Format("{0,-35} | {1,-10} | {2,-19} | {3}", f.Name, sizeStr, timeStr, f.FullName));
             }
-            Console.WriteLine("--------------------------------------------------------------------------------\n");
+            ConsoleHelper.WriteLineColor("--------------------------------------------------------------------------------\n", ConsoleColor.DarkGray);
         }
 
         public static void OpenExplorer(string path)

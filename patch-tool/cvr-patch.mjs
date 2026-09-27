@@ -405,34 +405,34 @@ function cmdExportPatch(targetDir, outputPath) {
  */
 function printHelp() {
   console.log(`
-${colors.bold}Clash Verge Rev 跨订阅链式代理独立注入/补丁程序${colors.reset}
+${colors.bold}Clash Verge Rev 跨订阅链式代理补丁与构建工具${colors.reset}
 
 ${colors.bold}用法:${colors.reset}
   node cvr-patch.mjs <command> [target_dir] [options]
 
-${colors.bold}命令:${colors.reset}
-  ${colors.green}status${colors.reset}        检查目标仓库的补丁注入状态 (默认目标: 自动探测或 CVR_DIR)
-  ${colors.green}inject${colors.reset}        对目标仓库进行非侵入式修改，解除跨订阅限制并自动备份 (别名: apply)
-  ${colors.green}restore${colors.reset}       从备份或反向替换完全撤销补丁，恢复原版代码 (别名: rollback, revert)
-  ${colors.green}diff${colors.reset}          在终端中以 Unified Diff 格式展示所有的局部修改内容
-  ${colors.green}export-patch${colors.reset}  导出标准 .patch 文件，供 git apply 使用
-  ${colors.green}build${colors.reset}         调用编译引擎自动编译 Clash Verge Windows 产物
-  ${colors.green}check-env${colors.reset}     检查系统编译环境状态
+${colors.bold}常用命令:${colors.reset}
+  ${colors.green}inject${colors.reset}        注入跨订阅补丁并自动备份 (别名: apply)
+  ${colors.green}restore${colors.reset}       撤销补丁恢复原版代码 (别名: rollback)
+  ${colors.green}build${colors.reset}         编译 Windows 客户端产物
+  ${colors.green}status${colors.reset}        检查补丁生效状态
+  ${colors.green}diff${colors.reset}          查看代码修改差异
+  ${colors.green}export-patch${colors.reset}  导出标准补丁文件 (.patch)
+  ${colors.green}check-env${colors.reset}     检测编译依赖环境
   ${colors.green}install-env${colors.reset}   自动安装缺失的编译环境
+  ${colors.green}help${colors.reset}          显示此帮助信息
 
 ${colors.bold}编译选项 (配合 build 使用):${colors.reset}
-  --win-x64, --x64       Windows 64位目标 (默认)
-  --win-arm64, --arm64   Windows ARM64目标
-  --win-x86, --x86       Windows 32位目标
-  --no-bundle, --exe     仅编译独立程序 (纯 EXE, 跳过打包流程, 调试最快)
-  --nsis, --setup        标准 Windows NSIS 安装包 (Setup.exe)
-  --portable, --zip      绿色免安装便携版 (ZIP 压缩包)
-  --fast                 极速测试构建 (--profile fast-release)
-  --release              标准生产优化发布构建
+  --win-x64, --x64       64位架构 (默认)
+  --win-arm64, --arm64   ARM64 架构
+  --win-x86, --x86       32位架构
+  --no-bundle, --exe     仅编译独立程序 (纯 EXE，最快)
+  --nsis, --setup        标准安装包 (Setup.exe)
+  --portable, --zip      绿色便携版 (ZIP 压缩包)
+  --fast                 快速构建 (--profile fast-release)
+  --release              正式发布构建
 
 ${colors.bold}示例:${colors.reset}
-  node cvr-patch.mjs status
-  node cvr-patch.mjs inject
+  node cvr-patch.mjs
   node cvr-patch.mjs build --no-bundle --fast
   node cvr-patch.mjs build --nsis
 `);
@@ -440,6 +440,15 @@ ${colors.bold}示例:${colors.reset}
 
 function main() {
   const args = process.argv.slice(2);
+
+  if (args.length === 0) {
+    const exePath = path.join(__dirname, 'cvr-patch.exe');
+    if (fs.existsSync(exePath)) {
+      const proc = spawnSync(exePath, [], { stdio: 'inherit' });
+      process.exit(proc.status ?? 0);
+    }
+  }
+
   const command = args[0] || 'status';
   const customTarget = args[1] && !args[1].startsWith('--') ? args[1] : null;
 

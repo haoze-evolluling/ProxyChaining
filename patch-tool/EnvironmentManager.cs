@@ -345,10 +345,10 @@ namespace CvrProxyChainPatcher
 
         public static void PrintReport(List<EnvItem> items)
         {
-            ConsoleHelper.LogHeader("Clash Verge Rev 编译依赖环境检测");
-            Console.WriteLine("--------------------------------------------------------------------------------");
-            Console.WriteLine(string.Format("{0,-30} | {1,-10} | {2,-18} | {3}", "组件名称", "必要性", "状态", "详细信息/版本"));
-            Console.WriteLine("--------------------------------------------------------------------------------");
+            ConsoleHelper.LogHeader("编译依赖环境检测");
+            ConsoleHelper.WriteLineColor("--------------------------------------------------------------------------------", ConsoleColor.DarkGray);
+            Console.WriteLine(string.Format("{0,-30} | {1,-10} | {2,-18} | {3}", "组件名称", "要求", "状态", "详细信息/版本"));
+            ConsoleHelper.WriteLineColor("--------------------------------------------------------------------------------", ConsoleColor.DarkGray);
 
             bool allReady = true;
             foreach (var item in items)
@@ -366,15 +366,15 @@ namespace CvrProxyChainPatcher
                     allReady = false;
                 }
             }
-            Console.WriteLine("--------------------------------------------------------------------------------\n");
+            ConsoleHelper.WriteLineColor("--------------------------------------------------------------------------------\n", ConsoleColor.DarkGray);
 
             if (allReady)
             {
-                ConsoleHelper.LogSuccess("太棒了！所有编译必要环境均已就绪，可随时执行自动编译。");
+                ConsoleHelper.LogSuccess("所有必要编译环境均已就绪。");
             }
             else
             {
-                ConsoleHelper.LogWarn("检测到部分必要编译依赖环境缺失！");
+                ConsoleHelper.LogWarn("检测到部分必要依赖环境缺失。");
                 Console.WriteLine("\n【缺失组件安装命令指引】:");
                 foreach (var item in items)
                 {

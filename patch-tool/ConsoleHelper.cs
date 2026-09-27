@@ -46,11 +46,42 @@ namespace CvrProxyChainPatcher
             Console.WriteLine(msg);
         }
 
+        public static void WriteHeader(string title)
+        {
+            WriteLineColor("==================================================", ConsoleColor.DarkGray);
+            WriteColor("  " + title + "\n", ConsoleColor.Cyan);
+            WriteLineColor("==================================================", ConsoleColor.DarkGray);
+        }
+
+        public static void WriteDivider()
+        {
+            WriteLineColor("--------------------------------------------------", ConsoleColor.DarkGray);
+        }
+
+        public static void WriteMenuItem(string key, string title, string hint = null, bool isSecondary = false)
+        {
+            if (isSecondary)
+            {
+                WriteColor("  [" + key + "] ", ConsoleColor.DarkGray);
+                WriteLineColor(title + (!string.IsNullOrEmpty(hint) ? " " + hint : ""), ConsoleColor.DarkGray);
+            }
+            else
+            {
+                WriteColor("  [" + key + "] ", ConsoleColor.Cyan);
+                WriteColor(title, ConsoleColor.White);
+                if (!string.IsNullOrEmpty(hint))
+                {
+                    WriteColor(" " + hint, ConsoleColor.DarkGray);
+                }
+                Console.WriteLine();
+            }
+        }
+
         public static void LogHeader(string msg)
         {
             Console.WriteLine();
-            WriteColor("=== " + msg + " ===", ConsoleColor.Cyan);
-            Console.WriteLine("\n");
+            WriteHeader(msg);
+            Console.WriteLine();
         }
 
         public static string NormalizeLineEndings(string text)
@@ -71,7 +102,7 @@ namespace CvrProxyChainPatcher
         public static bool PromptYesNo(string question, bool defaultYes)
         {
             string suffix = defaultYes ? " [Y/n]: " : " [y/N]: ";
-            WriteColor(question + suffix, ConsoleColor.Yellow);
+            WriteColor(question + suffix, ConsoleColor.Cyan);
             string input = Console.ReadLine();
             if (string.IsNullOrEmpty(input)) return defaultYes;
             input = input.Trim().ToLowerInvariant();
@@ -83,9 +114,9 @@ namespace CvrProxyChainPatcher
         public static string PromptInput(string prompt, string defaultValue)
         {
             if (!string.IsNullOrEmpty(defaultValue))
-                WriteColor(prompt + " [" + defaultValue + "]: ", ConsoleColor.Yellow);
+                WriteColor(prompt + " [" + defaultValue + "]: ", ConsoleColor.Cyan);
             else
-                WriteColor(prompt + ": ", ConsoleColor.Yellow);
+                WriteColor(prompt + ": ", ConsoleColor.Cyan);
 
             string input = Console.ReadLine();
             if (string.IsNullOrEmpty(input)) return defaultValue;

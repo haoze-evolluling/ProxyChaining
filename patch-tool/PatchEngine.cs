@@ -137,7 +137,7 @@ namespace CvrProxyChainPatcher
 
         public static void CmdStatus(string targetDir)
         {
-            ConsoleHelper.LogHeader("检查补丁状态: " + targetDir);
+            ConsoleHelper.LogHeader("补丁生效状态: " + targetDir);
 
             int appliedCount = 0;
             var rules = PatchRules.GetRules();
@@ -148,22 +148,31 @@ namespace CvrProxyChainPatcher
                 string reason;
                 RuleStatus status = GetRuleStatus(targetDir, rule, out reason);
                 ConsoleColor color = ConsoleColor.Yellow;
+                string statusText = "异常";
                 if (status == RuleStatus.APPLIED)
                 {
                     color = ConsoleColor.Green;
+                    statusText = "已注入";
                     appliedCount++;
                 }
                 else if (status == RuleStatus.NOT_APPLIED)
                 {
-                    color = ConsoleColor.Gray;
+                    color = ConsoleColor.DarkGray;
+                    statusText = "未注入";
                 }
                 else if (status == RuleStatus.MISSING)
                 {
                     color = ConsoleColor.Red;
+                    statusText = "缺失";
+                }
+                else if (status == RuleStatus.MODIFIED_OR_PARTIAL)
+                {
+                    color = ConsoleColor.Yellow;
+                    statusText = "部分修改";
                 }
 
                 Console.Write("  [");
-                ConsoleHelper.WriteColor(status.ToString(), color);
+                ConsoleHelper.WriteColor(statusText, color);
                 Console.WriteLine("] " + rule.RelPath);
                 Console.Write("          ");
                 ConsoleHelper.WriteLineColor(rule.Description, ConsoleColor.DarkGray);
@@ -177,15 +186,15 @@ namespace CvrProxyChainPatcher
             Console.WriteLine();
             if (appliedCount == total)
             {
-                ConsoleHelper.LogSuccess(string.Format("全部 {0} 个补丁模块均已注入 (跨订阅链式代理已启用)！", total));
+                ConsoleHelper.LogSuccess(string.Format("全部 {0} 个补丁模块均已生效 (跨订阅代理已启用)！", total));
             }
             else if (appliedCount == 0)
             {
-                ConsoleHelper.LogInfo("尚未注入任何补丁模块 (代码处于原版初始状态)。可运行 'inject' 执行注入。");
+                ConsoleHelper.LogInfo("尚未注入任何补丁模块 (代码处于原版状态)。");
             }
             else
             {
-                ConsoleHelper.LogWarn(string.Format("部分应用: 已注入 {0}/{1} 个模块。", appliedCount, total));
+                ConsoleHelper.LogWarn(string.Format("部分生效: 已注入 {0}/{1} 个模块。", appliedCount, total));
             }
         }
 

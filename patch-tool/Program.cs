@@ -10,43 +10,38 @@ namespace CvrProxyChainPatcher
         static void PrintHelp()
         {
             Console.WriteLine(@"
-==============================================================
-  Clash Verge Rev 跨订阅链式代理独立补丁与构建程序 (ProxyChaining)
-==============================================================
+==================================================
+  Clash Verge Rev 跨订阅链式代理补丁与构建工具
+==================================================
 
 用法:
   cvr-patch.exe <command> [target_dir] [options]
 
-命令:
-  status        检查目标仓库的补丁注入状态 (默认目标: 自动检测或 CVR_DIR)
-  inject        对目标仓库进行非侵入式修改，解除跨订阅限制并自动备份 (别名: apply)
-  restore       从备份或反向替换完全撤销补丁，恢复原版代码 (别名: rollback, revert)
-  diff          在终端中以 Unified Diff 格式展示所有的局部修改内容
-  export-patch  导出标准 .patch 文件，供 git apply 使用
-  build         自动编译 Clash Verge Windows 产物 (支持多种架构与产物选项)
-  check-env     检测系统编译环境 (Node.js, pnpm, Rust, MSVC, Git, WebView2)
-  install-env   一键自动安装缺失的编译依赖环境并配置 PATH
-  help          显示此帮助信息
+常用命令:
+  inject        注入跨订阅补丁并自动备份 (别名: apply)
+  restore       撤销补丁恢复原版代码 (别名: rollback)
+  build         编译 Windows 客户端产物
+  status        检查补丁生效状态
+  diff          查看代码修改差异
+  export-patch  导出标准补丁文件 (.patch)
+  check-env     检测编译依赖环境
+  install-env   自动安装缺失的编译环境
+  help          显示帮助信息
 
 编译选项 (cvr-patch.exe build [options]):
-  --win-x64, --x64       目标架构: Windows 64位 (默认)
-  --win-arm64, --arm64   目标架构: Windows ARM64
-  --win-x86, --x86       目标架构: Windows 32位
-  --no-bundle, --exe     产物模式: 仅编译独立可执行程序 (跳过打包，速度最快)
-  --nsis, --setup        产物模式: 标准 Windows NSIS 安装包 (Setup.exe)
-  --portable, --zip      产物模式: 绿色免安装便携版 (ZIP 压缩包)
-  --fast                 构建配置: 极速构建 (--profile fast-release)
-  --release              构建配置: 标准优化发布构建 (生产模式)
-  --debug                构建配置: 调试构建
-  --prebuild-only        仅下载与校验侧载核心资源，不执行后续编译
-  --force-prebuild       强制重新下载最新侧载核心
+  --win-x64, --x64       64位架构 (默认)
+  --win-arm64, --arm64   ARM64 架构
+  --win-x86, --x86       32位架构
+  --no-bundle, --exe     仅编译独立程序 (纯 EXE，最快)
+  --nsis, --setup        标准安装包 (Setup.exe)
+  --portable, --zip      绿色便携版 (ZIP 压缩包)
+  --fast                 快速构建 (--profile fast-release)
+  --release              正式发布构建
 
 示例:
-  cvr-patch.exe build                      # 启动交互式 Windows 编译向导
-  cvr-patch.exe build --no-bundle --fast   # 编译 Windows 64位纯 EXE (极速调试)
-  cvr-patch.exe build --nsis               # 编译 Windows 64位标准 NSIS 安装包
-  cvr-patch.exe build --portable           # 编译 Windows 64位绿色免安装 ZIP
-  cvr-patch.exe build --win-arm64 --fast   # 编译 Windows ARM64 产物
+  cvr-patch.exe                            # 启动交互式操作菜单
+  cvr-patch.exe build                      # 启动客户端编译向导
+  cvr-patch.exe build --no-bundle --fast   # 极速编译 64位纯 EXE
 ");
         }
 
@@ -63,14 +58,14 @@ namespace CvrProxyChainPatcher
                     if (it.Status != EnvStatus.Ready) { hasMissing = true; break; }
                 }
 
-                Console.WriteLine("环境操作选项:");
+                Console.WriteLine("操作选项:");
                 if (hasMissing)
                 {
-                    ConsoleHelper.WriteColor("  [1] 一键自动安装缺失依赖环境 (通过 winget / npm)\n", ConsoleColor.Green);
-                    ConsoleHelper.WriteColor("  [2] 导出安装脚本 (install-build-env.bat / .ps1)\n", ConsoleColor.Yellow);
+                    ConsoleHelper.WriteMenuItem("1", "自动安装缺失环境", "(通过 winget / npm)");
+                    ConsoleHelper.WriteMenuItem("2", "导出离线安装脚本", "(install-build-env.bat / .ps1)");
                 }
-                ConsoleHelper.WriteColor("  [3] 刷新并重新检测环境\n", ConsoleColor.Cyan);
-                ConsoleHelper.WriteColor("  [0] 返回上级菜单\n", ConsoleColor.DarkGray);
+                ConsoleHelper.WriteMenuItem("3", "刷新重新检测", null);
+                ConsoleHelper.WriteMenuItem("0", "返回上级", null, true);
                 Console.WriteLine();
 
                 string choice = ConsoleHelper.PromptInput("请输入选项", "0");
@@ -86,14 +81,16 @@ namespace CvrProxyChainPatcher
                         }
                     }
                     EnvironmentManager.RefreshPath();
-                    Console.WriteLine("\n按回车键刷新检测...");
+                    Console.WriteLine();
+                    ConsoleHelper.WriteColor("按回车键刷新检测...", ConsoleColor.DarkGray);
                     Console.ReadLine();
                 }
                 else if (choice == "2" && hasMissing)
                 {
                     string scriptDir = AppDomain.CurrentDomain.BaseDirectory;
                     EnvironmentManager.ExportInstallScripts(scriptDir, items);
-                    Console.WriteLine("\n按回车键继续...");
+                    Console.WriteLine();
+                    ConsoleHelper.WriteColor("按回车键继续...", ConsoleColor.DarkGray);
                     Console.ReadLine();
                 }
                 else if (choice == "3")
@@ -106,30 +103,30 @@ namespace CvrProxyChainPatcher
         static BuildOptions PromptCustomBuildOptions()
         {
             BuildOptions opt = new BuildOptions();
-            Console.WriteLine("\n[1/3] 请选择目标 Windows 架构:");
-            ConsoleHelper.WriteColor("  [1] Windows 64位 (x86_64-pc-windows-msvc) [绝大多数电脑推荐]\n", ConsoleColor.Green);
-            ConsoleHelper.WriteColor("  [2] Windows ARM64 (aarch64-pc-windows-msvc) [高通骁龙本/Surface Pro X]\n", ConsoleColor.Cyan);
-            ConsoleHelper.WriteColor("  [3] Windows 32位 (i686-pc-windows-msvc) [老旧系统兼容]\n", ConsoleColor.Yellow);
+            Console.WriteLine("\n[1/3] 选择目标架构:");
+            ConsoleHelper.WriteMenuItem("1", "64位 (x64)", "[绝大多数电脑推荐]");
+            ConsoleHelper.WriteMenuItem("2", "ARM64", "[高通骁龙本 / Surface Pro]");
+            ConsoleHelper.WriteMenuItem("3", "32位 (x86)", "[老旧系统兼容]");
             string cArch = ConsoleHelper.PromptInput("请选择 [1-3]", "1");
             if (cArch == "2") opt.Arch = TargetArch.WinArm64;
             else if (cArch == "3") opt.Arch = TargetArch.WinX86;
             else opt.Arch = TargetArch.WinX64;
 
-            Console.WriteLine("\n[2/3] 请选择产物打包形式:");
-            ConsoleHelper.WriteColor("  [1] 仅独立运行程序 (免安装纯 EXE, 跳过打包流程, 耗时最短, 调试首选)\n", ConsoleColor.Green);
-            ConsoleHelper.WriteColor("  [2] 标准 Windows NSIS 安装包 (Setup.exe 安装向导)\n", ConsoleColor.Cyan);
-            ConsoleHelper.WriteColor("  [3] 绿色免安装便携版 (包含核心与资源的 ZIP 压缩包, 解压即用)\n", ConsoleColor.Magenta);
-            ConsoleHelper.WriteColor("  [4] 内置 WebView2 离线安装包 (无需系统 WebView2 运行时)\n", ConsoleColor.Yellow);
+            Console.WriteLine("\n[2/3] 选择打包形式:");
+            ConsoleHelper.WriteMenuItem("1", "独立运行程序", "(纯 EXE，耗时最短)");
+            ConsoleHelper.WriteMenuItem("2", "标准安装包  ", "(Setup.exe 安装向导)");
+            ConsoleHelper.WriteMenuItem("3", "便携压缩包  ", "(ZIP 绿色版，解压即用)");
+            ConsoleHelper.WriteMenuItem("4", "离线完整包  ", "(内置 WebView2 运行时)");
             string cMode = ConsoleHelper.PromptInput("请选择 [1-4]", "1");
             if (cMode == "2") opt.Mode = PackageMode.NsisInstaller;
             else if (cMode == "3") opt.Mode = PackageMode.PortableZip;
             else if (cMode == "4") opt.Mode = PackageMode.FixedWebView2;
             else opt.Mode = PackageMode.NoBundle;
 
-            Console.WriteLine("\n[3/3] 请选择构建优化级别:");
-            ConsoleHelper.WriteColor("  [1] 极速测试构建 (Fast Release: --profile fast-release) [推荐, 编译快]\n", ConsoleColor.Green);
-            ConsoleHelper.WriteColor("  [2] 标准优化发布 (Standard Release: 生产优化, 体积最小执行最快)\n", ConsoleColor.Cyan);
-            ConsoleHelper.WriteColor("  [3] 调试构建 (Debug: 携带完整调试符号与日志)\n", ConsoleColor.Yellow);
+            Console.WriteLine("\n[3/3] 选择优化级别:");
+            ConsoleHelper.WriteMenuItem("1", "快速测试构建", "(Fast Release: 编译快) [推荐]");
+            ConsoleHelper.WriteMenuItem("2", "正式优化构建", "(Standard Release: 体积最小)");
+            ConsoleHelper.WriteMenuItem("3", "调试构建    ", "(Debug: 携带完整符号)");
             string cProf = ConsoleHelper.PromptInput("请选择 [1-3]", "1");
             if (cProf == "2") opt.Profile = BuildProfile.StandardRelease;
             else if (cProf == "3") opt.Profile = BuildProfile.Debug;
@@ -140,7 +137,7 @@ namespace CvrProxyChainPatcher
 
         static void CmdBuildInteractive(string targetDir)
         {
-            ConsoleHelper.LogHeader("Clash Verge Rev 自动编译向导 (Windows 产物构建)");
+            ConsoleHelper.LogHeader("Clash Verge Rev 客户端编译向导");
 
             // 1. 补丁检查
             var rules = PatchRules.GetRules();
@@ -153,7 +150,7 @@ namespace CvrProxyChainPatcher
 
             if (appliedCount < rules.Count)
             {
-                ConsoleHelper.LogWarn(string.Format("检测到跨订阅补丁未完全注入 ({0}/{1} 模块生效)。", appliedCount, rules.Count));
+                ConsoleHelper.LogWarn(string.Format("检测到补丁未完全注入 ({0}/{1} 模块生效)。", appliedCount, rules.Count));
                 if (ConsoleHelper.PromptYesNo("是否在编译前自动注入跨订阅补丁？", true))
                 {
                     PatchEngine.CmdInject(targetDir);
@@ -161,7 +158,7 @@ namespace CvrProxyChainPatcher
             }
             else
             {
-                ConsoleHelper.LogSuccess(string.Format("全部补丁模块已就绪 ({0}/{0} 模块生效)！", rules.Count));
+                ConsoleHelper.LogSuccess(string.Format("补丁状态: 全部就绪 ({0}/{0} 模块生效)", rules.Count));
             }
 
             // 2. 环境检查
@@ -175,7 +172,7 @@ namespace CvrProxyChainPatcher
             if (!envReady)
             {
                 EnvironmentManager.PrintReport(envItems);
-                if (ConsoleHelper.PromptYesNo("检测到必要依赖环境缺失，是否先由程序自动尝试安装？", true))
+                if (ConsoleHelper.PromptYesNo("检测到必要依赖环境缺失，是否自动尝试安装？", true))
                 {
                     foreach (var it in envItems)
                     {
@@ -189,19 +186,19 @@ namespace CvrProxyChainPatcher
             }
 
             // 3. 构建选项配置
-            Console.WriteLine("\n--------------------------------------------------------------");
-            ConsoleHelper.WriteColor("【Windows 目标产物快速选项】:\n", ConsoleColor.Cyan);
-            ConsoleHelper.WriteColor("  [1] Windows x64 极速独立程序 (纯 EXE, 跳过打包流程, 耗时最短, 调试首选)\n", ConsoleColor.Green);
-            ConsoleHelper.WriteColor("  [2] Windows x64 极速安装包 (NSIS Setup .exe, 兼顾构建速度与安装向导)\n", ConsoleColor.Cyan);
-            ConsoleHelper.WriteColor("  [3] Windows x64 正式安装包 (全量优化 Release NSIS Setup)\n", ConsoleColor.Yellow);
-            ConsoleHelper.WriteColor("  [4] Windows x64 绿色便携免安装包 (Portable .zip 压缩包, 解压即用)\n", ConsoleColor.Magenta);
-            ConsoleHelper.WriteColor("\n【更多自定义与高级选项】:\n", ConsoleColor.Cyan);
-            ConsoleHelper.WriteColor("  [5] 自定义 Windows 构建配置 (自由定制: 架构 x64/ARM64/x86 | 打包格式 | 优化级别)\n", ConsoleColor.White);
-            ConsoleHelper.WriteColor("  [6] 预下载与校验侧载核心 (Prebuild: mihomo, service, mmdb 规则库)\n", ConsoleColor.DarkYellow);
-            ConsoleHelper.WriteColor("  [0] 取消编译并返回\n", ConsoleColor.DarkGray);
-            Console.WriteLine("--------------------------------------------------------------");
+            Console.WriteLine();
+            ConsoleHelper.WriteDivider();
+            Console.WriteLine("请选择构建产物类型:");
+            ConsoleHelper.WriteMenuItem("1", "快速独立程序", "(64位 EXE，耗时最短，调试首选)");
+            ConsoleHelper.WriteMenuItem("2", "标准安装包  ", "(64位 Setup.exe，推荐日常使用)");
+            ConsoleHelper.WriteMenuItem("3", "便携免安装包", "(64位 ZIP 压缩包，解压即用)");
+            ConsoleHelper.WriteMenuItem("4", "正式发布包  ", "(全量优化 Release 安装包)");
+            ConsoleHelper.WriteMenuItem("5", "自定义构建  ", "(自选架构/打包格式/优化级别)");
+            ConsoleHelper.WriteMenuItem("6", "预下载内核  ", "(Prebuild 侧载核心资源与规则库)");
+            ConsoleHelper.WriteMenuItem("0", "取消返回    ", null, true);
+            ConsoleHelper.WriteDivider();
 
-            string choice = ConsoleHelper.PromptInput("请选择 [1-6]", "1");
+            string choice = ConsoleHelper.PromptInput("请选择 [0-6]", "1");
             if (choice == "0") return;
 
             BuildOptions options = new BuildOptions();
@@ -220,14 +217,14 @@ namespace CvrProxyChainPatcher
             else if (choice == "3")
             {
                 options.Arch = TargetArch.WinX64;
-                options.Mode = PackageMode.NsisInstaller;
-                options.Profile = BuildProfile.StandardRelease;
+                options.Mode = PackageMode.PortableZip;
+                options.Profile = BuildProfile.FastRelease;
             }
             else if (choice == "4")
             {
                 options.Arch = TargetArch.WinX64;
-                options.Mode = PackageMode.PortableZip;
-                options.Profile = BuildProfile.FastRelease;
+                options.Mode = PackageMode.NsisInstaller;
+                options.Profile = BuildProfile.StandardRelease;
             }
             else if (choice == "5")
             {
@@ -271,10 +268,9 @@ namespace CvrProxyChainPatcher
             while (true)
             {
                 Console.Clear();
-                Console.WriteLine("==============================================================");
-                ConsoleHelper.WriteColor("  Clash Verge Rev 跨订阅链式代理独立补丁与构建程序\n", ConsoleColor.Cyan);
-                Console.WriteLine("==============================================================");
-                Console.WriteLine("当前目标仓库: " + targetDir);
+                ConsoleHelper.WriteHeader("Clash Verge Rev 跨订阅补丁工具");
+                Console.Write("目标路径: ");
+                ConsoleHelper.WriteLineColor(targetDir, ConsoleColor.White);
 
                 // Check patch status
                 var rules = PatchRules.GetRules();
@@ -285,33 +281,30 @@ namespace CvrProxyChainPatcher
                     if (PatchEngine.GetRuleStatus(targetDir, rule, out reason) == RuleStatus.APPLIED) applied++;
                 }
 
-                Console.Write("当前补丁状态: ");
+                Console.Write("补丁状态: ");
                 if (applied == rules.Count)
                 {
-                    ConsoleHelper.WriteLineColor(string.Format("全部已注入 ({0}/{1} 模块生效)", applied, rules.Count), ConsoleColor.Green);
+                    ConsoleHelper.WriteLineColor(string.Format("全部已生效 ({0}/{1} 模块)", applied, rules.Count), ConsoleColor.Green);
                 }
                 else if (applied == 0)
                 {
-                    ConsoleHelper.WriteLineColor(string.Format("原版状态未注入 (0/{0} 模块生效)", rules.Count), ConsoleColor.Gray);
+                    ConsoleHelper.WriteLineColor(string.Format("未注入 (0/{0} 模块)", rules.Count), ConsoleColor.Yellow);
                 }
                 else
                 {
-                    ConsoleHelper.WriteLineColor(string.Format("部分注入 ({0}/{1} 模块生效)", applied, rules.Count), ConsoleColor.Yellow);
+                    ConsoleHelper.WriteLineColor(string.Format("部分生效 ({0}/{1} 模块)", applied, rules.Count), ConsoleColor.Yellow);
                 }
 
                 Console.WriteLine("\n请选择操作:");
-                ConsoleHelper.WriteColor("  [1] 一键注入补丁 (Inject / Apply)\n", ConsoleColor.Green);
-                ConsoleHelper.WriteColor("  [2] 一键撤销还原 (Restore / Rollback)\n", ConsoleColor.Yellow);
-                ConsoleHelper.WriteColor("  [3] 检查补丁状态 (Status)\n", ConsoleColor.Cyan);
-                ConsoleHelper.WriteColor("  [4] 查看改动差异 (Unified Diff)\n", ConsoleColor.White);
-                ConsoleHelper.WriteColor("  [5] 导出标准补丁 (Export .patch)\n", ConsoleColor.Magenta);
-                ConsoleHelper.WriteColor("  [6] 自动编译 Clash Verge 产物 (Auto Build Artifacts)\n", ConsoleColor.Green);
-                ConsoleHelper.WriteColor("  [7] 检查与安装编译环境 (Check & Install Environment)\n", ConsoleColor.Yellow);
-                ConsoleHelper.WriteColor("  [8] 更改目标目录 (Change Target Directory)\n", ConsoleColor.DarkCyan);
-                ConsoleHelper.WriteColor("  [0] 退出程序 (Exit)\n", ConsoleColor.DarkGray);
+                ConsoleHelper.WriteMenuItem("1", "注入补丁", applied == rules.Count ? "(当前已全部生效)" : null);
+                ConsoleHelper.WriteMenuItem("2", "还原原版", applied == 0 ? "(当前已是原版)" : null);
+                ConsoleHelper.WriteMenuItem("3", "编译客户端", "一键生成 Windows 运行程序或安装包");
+                ConsoleHelper.WriteMenuItem("4", "高级设置与工具", "差异对比 / 导出补丁 / 环境检测 / 路径切换");
+                ConsoleHelper.WriteMenuItem("0", "退出", null, true);
                 Console.WriteLine();
 
-                string choice = ConsoleHelper.PromptInput("请输入选项 [0-8]", "1");
+                string defaultChoice = (applied == rules.Count) ? "3" : "1";
+                string choice = ConsoleHelper.PromptInput("请输入选项 [0-4]", defaultChoice);
                 if (choice == "0") break;
 
                 switch (choice)
@@ -323,22 +316,59 @@ namespace CvrProxyChainPatcher
                         PatchEngine.CmdRestore(targetDir);
                         break;
                     case "3":
-                        PatchEngine.CmdStatus(targetDir);
-                        break;
-                    case "4":
-                        PatchEngine.CmdDiff(targetDir);
-                        break;
-                    case "5":
-                        PatchEngine.CmdExportPatch(targetDir, null);
-                        break;
-                    case "6":
                         CmdBuildInteractive(targetDir);
                         break;
-                    case "7":
-                        CmdEnvInteractive();
+                    case "4":
+                        AdvancedMenu(ref targetDir);
+                        continue;
+                    default:
+                        ConsoleHelper.LogWarn("无效的选项，请重新输入。");
                         break;
-                    case "8":
-                        Console.Write("\n请输入新的 Clash Verge Rev 根目录路径: ");
+                }
+
+                Console.WriteLine();
+                ConsoleHelper.WriteColor("按回车键返回主菜单...", ConsoleColor.DarkGray);
+                Console.ReadLine();
+            }
+        }
+
+        static void AdvancedMenu(ref string targetDir)
+        {
+            while (true)
+            {
+                Console.Clear();
+                ConsoleHelper.WriteHeader("高级设置与工具");
+                Console.Write("目标路径: ");
+                ConsoleHelper.WriteLineColor(targetDir, ConsoleColor.White);
+
+                Console.WriteLine("\n请选择操作:");
+                ConsoleHelper.WriteMenuItem("1", "补丁状态详情", "查看各模块生效状态");
+                ConsoleHelper.WriteMenuItem("2", "查看改动差异", "预览 Unified Diff 代码改动");
+                ConsoleHelper.WriteMenuItem("3", "导出补丁文件", "生成 .patch 格式补丁");
+                ConsoleHelper.WriteMenuItem("4", "编译环境管理", "检测与安装 Node/Rust/MSVC 依赖");
+                ConsoleHelper.WriteMenuItem("5", "更改目标路径", "切换其他 Clash Verge 仓库目录");
+                ConsoleHelper.WriteMenuItem("0", "返回主菜单", null, true);
+                Console.WriteLine();
+
+                string choice = ConsoleHelper.PromptInput("请输入选项 [0-5]", "0");
+                if (choice == "0") break;
+
+                switch (choice)
+                {
+                    case "1":
+                        PatchEngine.CmdStatus(targetDir);
+                        break;
+                    case "2":
+                        PatchEngine.CmdDiff(targetDir);
+                        break;
+                    case "3":
+                        PatchEngine.CmdExportPatch(targetDir, null);
+                        break;
+                    case "4":
+                        CmdEnvInteractive();
+                        continue;
+                    case "5":
+                        Console.Write("\n请输入新的 Clash Verge 根目录路径: ");
                         string lineRaw = Console.ReadLine();
                         string newDir = lineRaw != null ? lineRaw.Trim('"', ' ', '\'') : null;
                         if (!string.IsNullOrEmpty(newDir))
@@ -346,7 +376,7 @@ namespace CvrProxyChainPatcher
                             try
                             {
                                 targetDir = PatchEngine.ResolveTargetDir(newDir);
-                                ConsoleHelper.LogSuccess("目标目录已切换至: " + targetDir);
+                                ConsoleHelper.LogSuccess("目标路径已切换至: " + targetDir);
                             }
                             catch (Exception ex)
                             {
@@ -360,7 +390,7 @@ namespace CvrProxyChainPatcher
                 }
 
                 Console.WriteLine();
-                Console.Write("按回车键返回主菜单...");
+                ConsoleHelper.WriteColor("按回车键继续...", ConsoleColor.DarkGray);
                 Console.ReadLine();
             }
         }
@@ -415,12 +445,10 @@ namespace CvrProxyChainPatcher
                 while (string.IsNullOrEmpty(targetDir) || !Directory.Exists(targetDir))
                 {
                     Console.Clear();
-                    Console.WriteLine("==============================================================");
-                    ConsoleHelper.WriteColor("  Clash Verge Rev 跨订阅链式代理独立补丁与构建程序\n", ConsoleColor.Cyan);
-                    Console.WriteLine("==============================================================\n");
-                    ConsoleHelper.LogWarn("未能在 target-package 目录或默认路径自动定位到 Clash Verge Rev 项目！");
-                    Console.WriteLine("提示: 请将待注入的 Clash Verge Rev 源码或程序包解压放置在 target-package 目录下。");
-                    Console.Write("或者手动输入 Clash Verge Rev 代码根目录路径 (输入 0 退出): ");
+                    ConsoleHelper.WriteHeader("Clash Verge Rev 跨订阅补丁工具");
+                    ConsoleHelper.LogWarn("未能在 target-package 目录或默认路径定位到 Clash Verge Rev 项目。");
+                    Console.WriteLine("提示: 请将源码目录放置在 target-package 文件夹下，或直接输入路径。");
+                    Console.Write("请输入代码根目录路径 (输入 0 退出): ");
                     string inRaw = Console.ReadLine();
                     string input = inRaw != null ? inRaw.Trim('"', ' ', '\'') : null;
                     if (input == "0" || string.IsNullOrEmpty(input)) return 0;
@@ -431,7 +459,7 @@ namespace CvrProxyChainPatcher
                     catch (Exception ex)
                     {
                         ConsoleHelper.LogError(ex.Message);
-                        Console.WriteLine("按回车键重试...");
+                        ConsoleHelper.WriteColor("按回车键重试...", ConsoleColor.DarkGray);
                         Console.ReadLine();
                     }
                 }
